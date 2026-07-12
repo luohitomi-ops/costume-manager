@@ -66,7 +66,7 @@ export function getItemById(id) {
   return db.prepare('SELECT * FROM items WHERE id = ?').get(id);
 }
 
-export function searchItems({ q, category, character_id, include_inactive } = {}) {
+export function searchItems({ q, category, character_id, status, include_inactive } = {}) {
   const clauses = [];
   const params = {};
 
@@ -84,6 +84,10 @@ export function searchItems({ q, category, character_id, include_inactive } = {}
   if (character_id) {
     clauses.push('character_id = @character_id');
     params.character_id = character_id;
+  }
+  if (status) {
+    clauses.push('status = @status');
+    params.status = status;
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';

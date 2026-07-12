@@ -13,12 +13,13 @@ router.post('/', (req, res, next) => {
 });
 
 router.get('/', (req, res) => {
-  const { q, category, character_id, include_inactive } = req.query;
+  const { q, category, character_id, status, include_inactive } = req.query;
   res.json(
     searchItems({
       q,
       category,
       character_id,
+      status,
       include_inactive: include_inactive === 'true',
     })
   );
