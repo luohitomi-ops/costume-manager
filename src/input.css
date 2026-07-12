@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@source "../public/index.html";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "costume";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: #FBF8F1;
+  --color-base-200: #EFEAE0;
+  --color-base-300: #F2ECDE;
+  --color-base-content: #37332C;
+  --color-primary: #3F5C46;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #D98A4E;
+  --color-secondary-content: #FFFFFF;
+  --color-accent: #8779BE;
+  --color-accent-content: #FFFFFF;
+  --color-neutral: #8B8374;
+  --color-neutral-content: #FBF8F1;
+  --color-info: #6E8F6B;
+  --color-info-content: #FFFFFF;
+  --color-success: #6E8F6B;
+  --color-success-content: #FFFFFF;
+  --color-warning: #D98A4E;
+  --color-warning-content: #FFFFFF;
+  --color-error: #B4503D;
+  --color-error-content: #FFFFFF;
+  --radius-selector: 0.75rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.625rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: "Pretendard", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
