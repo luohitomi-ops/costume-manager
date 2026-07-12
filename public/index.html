@@ -306,7 +306,8 @@ document.getElementById('loadout-button').addEventListener('click', async () => 
   renderList('loadout-results', items, '這個角色還沒有登記任何道具');
 });
 
-document.getElementById('nav-home').addEventListener('click', () => {
+document.getElementById('nav-home').addEventListener('click', (e) => {
+  e.preventDefault();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setActiveNav('nav-home');
 });
