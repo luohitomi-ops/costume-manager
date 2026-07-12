@@ -71,6 +71,106 @@
 
 <script src="shared.js"></script>
 <script>
+let allCharacters = [];
+let currentItemsByChar = new Map();
+const expandedIds = new Set();
+
+async function fetchCharacters() {
+  const res = await fetch('/api/characters');
+  if (!res.ok) throw new Error('characters fetch failed');
+  return res.json();
+}
+
+async function fetchItems(filters) {
+  const params = new URLSearchParams();
+  if (filters.category) params.set('category', filters.category);
+  if (filters.status) params.set('status', filters.status);
+  if (filters.q) params.set('q', filters.q);
+  const res = await fetch('/api/items?' + params.toString());
+  if (!res.ok) throw new Error('items fetch failed');
+  return res.json();
+}
+
+function groupByCharacter(items) {
+  const map = new Map();
+  for (const item of items) {
+    if (!map.has(item.character_id)) map.set(item.character_id, []);
+    map.get(item.character_id).push(item);
+  }
+  return map;
+}
+
+function renderWardrobe() {
+  const list = document.getElementById('wardrobe-list');
+  const rows = allCharacters
+    .map((c) => ({ char: c, items: currentItemsByChar.get(c.id) || [] }))
+    .filter((row) => row.items.length > 0);
+
+  if (rows.length === 0) {
+    list.innerHTML = '<p class="text-sm text-center py-3" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem">沒有符合條件的道具</p>';
+    return;
+  }
+
+  list.innerHTML = rows.map(({ char, items }) => {
+    const isOpen = expandedIds.has(char.id);
+    return `
+      <section class="card relative bg-base-100 shadow-md overflow-hidden" style="border:1px solid #E4DBC5;border-radius:1.625rem">
+        <button type="button" class="wardrobe-char-toggle w-full flex items-center justify-between gap-3 px-6 py-5 text-left" data-char-id="${char.id}">
+          <span class="font-bold text-base-content">${char.name}（${items.length}）</span>
+          <svg class="w-5 h-5 shrink-0" style="color:#8B8374;transform:rotate(${isOpen ? '180deg' : '0deg'})" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <ul class="flex flex-col gap-2 px-6 pb-6 m-0 list-none ${isOpen ? '' : 'hidden'}">
+          ${items.map(itemToLine).join('')}
+        </ul>
+      </section>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.wardrobe-char-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = Number(btn.dataset.charId);
+      if (expandedIds.has(id)) expandedIds.delete(id);
+      else expandedIds.add(id);
+      renderWardrobe();
+    });
+  });
+}
+
+async function refreshItems() {
+  const errorEl = document.getElementById('wardrobe-error');
+  try {
+    const items = await fetchItems({
+      category: document.getElementById('filter-category').value,
+      status: document.getElementById('filter-status').value,
+      q: document.getElementById('filter-q').value,
+    });
+    currentItemsByChar = groupByCharacter(items);
+    errorEl.classList.add('hidden');
+    renderWardrobe();
+  } catch (err) {
+    errorEl.classList.remove('hidden');
+  }
+}
+
+let debounceTimer;
+function debounceRefresh() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(refreshItems, 300);
+}
+
+document.getElementById('filter-category').addEventListener('change', refreshItems);
+document.getElementById('filter-status').addEventListener('change', refreshItems);
+document.getElementById('filter-q').addEventListener('input', debounceRefresh);
+
+(async function init() {
+  const errorEl = document.getElementById('wardrobe-error');
+  try {
+    allCharacters = await fetchCharacters();
+    await refreshItems();
+  } catch (err) {
+    errorEl.classList.remove('hidden');
+  }
+})();
 </script>
 </body>
 </html>
