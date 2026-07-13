@@ -72,40 +72,8 @@
                 <span class="cs-trigger-label flex-1 text-left"></span>
                 <svg class="w-4 h-4 shrink-0" style="color:#8B8374" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
               </button>
-              <ul class="cs-menu fixed z-50 bg-base-100 rounded-xl shadow-lg p-1 overflow-y-auto" style="max-height:min(320px, calc(100vh - 16px))" role="listbox" hidden>
-                <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="costume" aria-selected="true">
-                  <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a2 2 0 1 1 4 0"/><path d="M12 4a2 2 0 1 0-4 0"/><path d="M12 4v3"/><path d="M4 20v-4.5c0-2 6-5.5 8-5.5s8 3.5 8 5.5V20H4Z"/></svg></span>
-                  <span class="cs-option-label">服裝</span>
-                </li>
-                <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="wig" aria-selected="false">
-                  <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14c0-6 3.5-9 8-9s8 3 8 9"/><path d="M6 12c1-2 2-3 2-6M18 12c-1-2-2-3-2-6M12 6v3"/><path d="M4 14v3a1 1 0 0 0 1 1h1M20 14v3a1 1 0 0 1-1 1h-1"/></svg></span>
-                  <span class="cs-option-label">假髮</span>
-                </li>
-                <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="shoes" aria-selected="false">
-                  <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-4c2-.5 3-1.5 4-3 1.5 1.5 3 2 5 2h2c2.5 0 4.5 1 6 3v2H3Z"/></svg></span>
-                  <span class="cs-option-label">鞋子</span>
-                </li>
-                <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="prop" aria-selected="false">
-                  <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z"/><path d="M4 8.5 12 13l8-4.5M12 13v7"/></svg></span>
-                  <span class="cs-option-label">道具</span>
-                </li>
-                <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="lens" aria-selected="false">
-                  <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
-                  <span class="cs-option-label">隱眼</span>
-                </li>
-                <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="other" aria-selected="false">
-                  <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></span>
-                  <span class="cs-option-label">其他</span>
-                </li>
-              </ul>
-              <select id="item-category" class="sr-only" required tabindex="-1" aria-hidden="true">
-                <option value="costume">服裝</option>
-                <option value="wig">假髮</option>
-                <option value="shoes">鞋子</option>
-                <option value="prop">道具</option>
-                <option value="lens">隱眼</option>
-                <option value="other">其他</option>
-              </select>
+              <ul class="cs-menu fixed z-50 bg-base-100 rounded-xl shadow-lg p-1 overflow-y-auto" style="max-height:min(320px, calc(100vh - 16px))" role="listbox" hidden></ul>
+              <select id="item-category" class="sr-only" required tabindex="-1" aria-hidden="true"></select>
             </div>
             <div class="flex-1" style="min-width:140px">
               <label for="item-status" class="block text-sm mb-1" style="color:#8B8374">目前狀態</label>
@@ -241,7 +209,32 @@ function initCustomSelect(root) {
   applyValue(hiddenSelect.value);
 }
 
-document.querySelectorAll('.custom-select').forEach(initCustomSelect);
+let categoryLabels = {};
+
+async function loadCategoryOptions() {
+  const categories = await fetch('/api/categories').then((r) => r.json());
+  categoryLabels = Object.fromEntries(categories.map((c) => [c.slug, c.name]));
+
+  const hiddenSelect = document.getElementById('item-category');
+  hiddenSelect.innerHTML = categories
+    .map((c) => `<option value="${c.slug}">${c.name}</option>`)
+    .join('');
+
+  const root = document.querySelector('.custom-select[data-target="item-category"]');
+  const menu = root.querySelector('.cs-menu');
+  menu.innerHTML = categories
+    .map(
+      (c, i) => `
+        <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="${c.slug}" aria-selected="${i === 0 ? 'true' : 'false'}">
+          <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46">${categoryIcon(c.slug)}</span>
+          <span class="cs-option-label">${c.name}</span>
+        </li>
+      `
+    )
+    .join('');
+
+  initCustomSelect(root);
+}
 
 async function refreshCharacterDropdowns() {
   const characters = await fetch('/api/characters').then(r => r.json());
@@ -322,9 +315,10 @@ function renderList(elementId, items, emptyMessage) {
     list.innerHTML = `<li class="empty text-sm text-center py-3" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem">${emptyMessage}</li>`;
     return;
   }
-  list.innerHTML = items.map(itemToLine).join('');
+  list.innerHTML = items.map((item) => itemToLine(item, categoryLabels)).join('');
 }
 
+loadCategoryOptions();
 refreshCharacterDropdowns();
 </script>
 </body>
