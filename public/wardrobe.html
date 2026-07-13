@@ -20,12 +20,6 @@
         <label for="filter-category" class="block text-sm mb-1" style="color:#8B8374">分類</label>
         <select id="filter-category" class="select w-full h-11 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5">
           <option value="">全部分類</option>
-          <option value="costume">服裝</option>
-          <option value="wig">假髮</option>
-          <option value="shoes">鞋子</option>
-          <option value="prop">道具</option>
-          <option value="lens">隱眼</option>
-          <option value="other">其他</option>
         </select>
       </div>
       <div class="flex-1" style="min-width:140px">
@@ -73,7 +67,16 @@
 <script>
 let allCharacters = [];
 let currentItemsByChar = new Map();
+let categoryLabels = {};
 const expandedIds = new Set();
+
+async function loadCategories() {
+  const categories = await fetch('/api/categories').then((r) => r.json());
+  categoryLabels = Object.fromEntries(categories.map((c) => [c.slug, c.name]));
+  const select = document.getElementById('filter-category');
+  const optionsHtml = categories.map((c) => `<option value="${c.slug}">${c.name}</option>`).join('');
+  select.insertAdjacentHTML('beforeend', optionsHtml);
+}
 
 async function fetchCharacters() {
   const res = await fetch('/api/characters');
@@ -120,7 +123,7 @@ function renderWardrobe() {
           <svg class="w-5 h-5 shrink-0" style="color:#8B8374;transform:rotate(${isOpen ? '180deg' : '0deg'})" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <ul class="flex flex-col gap-2 px-6 pb-6 m-0 list-none ${isOpen ? '' : 'hidden'}">
-          ${items.map(itemToLine).join('')}
+          ${items.map((item) => itemToLine(item, categoryLabels)).join('')}
         </ul>
       </section>
     `;
@@ -165,6 +168,7 @@ document.getElementById('filter-q').addEventListener('input', debounceRefresh);
 (async function init() {
   const errorEl = document.getElementById('wardrobe-error');
   try {
+    await loadCategories();
     allCharacters = await fetchCharacters();
     await refreshItems();
   } catch (err) {
