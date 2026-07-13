@@ -1,6 +1,6 @@
 import db from '../db/connection.js';
+import { categoryExists } from './category.js';
 
-const CATEGORIES = ['costume', 'wig', 'shoes', 'prop', 'lens', 'other'];
 const STATUSES = ['unassigned', 'in_storage', 'lent_out'];
 
 function badRequest(message) {
@@ -37,8 +37,8 @@ export function createItem(input) {
 
   if (!character_id) throw badRequest('character_id is required');
   if (!name || !name.trim()) throw badRequest('name is required');
-  if (!CATEGORIES.includes(category)) {
-    throw badRequest(`category must be one of: ${CATEGORIES.join(', ')}`);
+  if (!categoryExists(category)) {
+    throw badRequest('category does not exist');
   }
 
   const status = validateStatusFields(input);
@@ -142,4 +142,4 @@ export function allItemsWithCharacters() {
   `).all();
 }
 
-export { CATEGORIES, STATUSES };
+export { STATUSES };

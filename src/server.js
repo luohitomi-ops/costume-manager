@@ -5,6 +5,7 @@ import './db/connection.js';
 import charactersRouter from './routes/characters.js';
 import itemsRouter from './routes/items.js';
 import exportRouter from './routes/export.js';
+import categoriesRouter from './routes/categories.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,6 +15,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/characters', charactersRouter);
 app.use('/api/items', itemsRouter);
+app.use('/api/categories', categoriesRouter);
 app.use('/api', exportRouter);
 
 const PORT = process.env.PORT || 3000;

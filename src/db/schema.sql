@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   character_id INTEGER NOT NULL REFERENCES characters(id),
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('costume', 'wig', 'shoes', 'prop', 'lens', 'other')),
+  category TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'unassigned' CHECK (status IN ('unassigned', 'in_storage', 'lent_out')),
   location TEXT,
   borrower TEXT,
