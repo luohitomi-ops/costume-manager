@@ -88,10 +88,20 @@ function renderCategories(categories) {
       const input = li.querySelector('.category-rename-input');
       input.focus();
       input.select();
-      const commit = () => renameCategory(slug, input.value);
+      let settled = false;
+      const commit = () => {
+        if (settled) return;
+        settled = true;
+        renameCategory(slug, input.value);
+      };
+      const cancel = () => {
+        if (settled) return;
+        settled = true;
+        refreshCategories();
+      };
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') commit();
-        if (e.key === 'Escape') refreshCategories();
+        if (e.key === 'Escape') cancel();
       });
       input.addEventListener('blur', commit);
     });
