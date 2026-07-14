@@ -74,6 +74,7 @@
               </button>
               <ul class="cs-menu fixed z-50 bg-base-100 rounded-xl shadow-lg p-1 overflow-y-auto" style="max-height:min(320px, calc(100vh - 16px))" role="listbox" hidden></ul>
               <select id="item-category" class="sr-only" required tabindex="-1" aria-hidden="true"></select>
+              <p id="category-load-error" class="text-sm text-center py-2 mt-1 hidden" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem"></p>
             </div>
             <div class="flex-1" style="min-width:140px">
               <label for="item-status" class="block text-sm mb-1" style="color:#8B8374">目前狀態</label>
@@ -212,28 +213,35 @@ function initCustomSelect(root) {
 let categoryLabels = {};
 
 async function loadCategoryOptions() {
-  const categories = await fetch('/api/categories').then((r) => r.json());
-  categoryLabels = Object.fromEntries(categories.map((c) => [c.slug, c.name]));
+  const errorEl = document.getElementById('category-load-error');
+  try {
+    const categories = await fetch('/api/categories').then((r) => r.json());
+    categoryLabels = Object.fromEntries(categories.map((c) => [c.slug, c.name]));
 
-  const hiddenSelect = document.getElementById('item-category');
-  hiddenSelect.innerHTML = categories
-    .map((c) => `<option value="${c.slug}">${c.name}</option>`)
-    .join('');
+    const hiddenSelect = document.getElementById('item-category');
+    hiddenSelect.innerHTML = categories
+      .map((c) => `<option value="${c.slug}">${c.name}</option>`)
+      .join('');
 
-  const root = document.querySelector('.custom-select[data-target="item-category"]');
-  const menu = root.querySelector('.cs-menu');
-  menu.innerHTML = categories
-    .map(
-      (c, i) => `
-        <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="${c.slug}" aria-selected="${i === 0 ? 'true' : 'false'}">
-          <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46">${categoryIcon(c.slug)}</span>
-          <span class="cs-option-label">${c.name}</span>
-        </li>
-      `
-    )
-    .join('');
+    const root = document.querySelector('.custom-select[data-target="item-category"]');
+    const menu = root.querySelector('.cs-menu');
+    menu.innerHTML = categories
+      .map(
+        (c, i) => `
+          <li class="cs-option flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer" role="option" data-value="${c.slug}" aria-selected="${i === 0 ? 'true' : 'false'}">
+            <span class="cs-option-icon w-5 h-5 shrink-0" style="color:#3F5C46">${categoryIcon(c.slug)}</span>
+            <span class="cs-option-label">${c.name}</span>
+          </li>
+        `
+      )
+      .join('');
 
-  initCustomSelect(root);
+    initCustomSelect(root);
+    errorEl.classList.add('hidden');
+  } catch (err) {
+    errorEl.textContent = '分類載入失敗，請重新整理頁面。';
+    errorEl.classList.remove('hidden');
+  }
 }
 
 async function refreshCharacterDropdowns() {

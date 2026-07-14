@@ -84,8 +84,9 @@ function renderCategories(categories) {
     li.querySelector('.btn-rename').addEventListener('click', () => {
       const nameEl = li.querySelector('.category-name');
       const currentName = nameEl.textContent;
-      nameEl.outerHTML = `<input type="text" class="category-rename-input input h-8 min-h-0" value="${currentName}" style="background:#F2ECDE;border-color:#E4DBC5">`;
+      nameEl.outerHTML = `<input type="text" class="category-rename-input input h-8 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5">`;
       const input = li.querySelector('.category-rename-input');
+      input.value = currentName;
       input.focus();
       input.select();
       let settled = false;
@@ -151,6 +152,7 @@ async function renameCategory(slug, name) {
   if (!res.ok) {
     const err = await res.json();
     showError(err.error);
+    return;
   }
   await refreshCategories();
 }
