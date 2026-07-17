@@ -27,6 +27,8 @@ Two rounds of live spike-testing were done against this exact codebase before wr
    - This is unacceptable for two independent reasons: a friend's machine has no Node.js installed at all (the entire point of packaging), so this fallback would just crash there instead of "working by accident" the way it did on the dev machine — and the fallback's real-path resolution is exactly the mechanism that leaked real data during testing.
    - **Fix: bundle with esbuild to a single CJS file first (Task 1), so pkg only ever has to snapshot one already-resolved CommonJS file** — this avoids the ESM bytecode-compilation failure entirely, and Task 1 includes an explicit check that the shipped exe never depends on a real Node.exe being present.
 
+3. **`pkg`'s `package.json` config (`"pkg": { "targets": [...] }`) is silently ignored when `pkg` is invoked with an explicit file path** (`npx pkg build/bundle.cjs ...`) — it's only read when pkg is pointed at a directory/`package.json` (`npx pkg .`). Confirmed during Task 1: running the file-path form without an explicit `--targets` flag silently defaulted to whatever pkg's own default is (`node24-win-x64` at time of testing) instead of the configured `node22-win-x64`. Both targets happen to work fine (both have prebuilt binaries), so this didn't block Task 1 — but every `npx pkg build/bundle.cjs ...` command in this plan (Tasks 2-4) passes `--targets node22-win-x64` explicitly rather than relying on the config being picked up. Keep doing this in any command you add that invokes pkg this way.
+
 ---
 
 ### Task 1: esbuild bundle + pkg packaging, verified standalone
@@ -191,7 +193,7 @@ Expected: same as before this change — `Costume Manager running at http://loca
 ```bash
 npm run bundle
 mkdir -p /tmp/task2-verify
-npx pkg build/bundle.cjs --output /tmp/task2-verify/costume-manager.exe
+npx pkg build/bundle.cjs --targets node22-win-x64 --output /tmp/task2-verify/costume-manager.exe
 mkdir -p /tmp/task2-verify/native_modules
 cp -r node_modules/better-sqlite3 /tmp/task2-verify/native_modules/better-sqlite3
 mkdir -p /tmp/task2-verify/db
@@ -321,7 +323,7 @@ Expected: server starts, logs the URL, serves the UI at `http://localhost:3000` 
 ```bash
 npm run bundle
 mkdir -p /tmp/task3-verify
-npx pkg build/bundle.cjs --output /tmp/task3-verify/costume-manager.exe
+npx pkg build/bundle.cjs --targets node22-win-x64 --output /tmp/task3-verify/costume-manager.exe
 mkdir -p /tmp/task3-verify/native_modules
 cp -r node_modules/better-sqlite3 /tmp/task3-verify/native_modules/better-sqlite3
 mkdir -p /tmp/task3-verify/db
@@ -410,7 +412,7 @@ fs.mkdirSync(distDir, { recursive: true });
 
 console.log('Packaging bundle with pkg...');
 execSync(
-  `npx pkg build/bundle.cjs --output "${path.join(distDir, 'costume-manager.exe')}"`,
+  `npx pkg build/bundle.cjs --targets node22-win-x64 --output "${path.join(distDir, 'costume-manager.exe')}"`,
   { stdio: 'inherit', cwd: root }
 );
 
