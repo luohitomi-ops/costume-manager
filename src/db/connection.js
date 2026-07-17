@@ -1,10 +1,19 @@
-import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', '..', 'data');
+const require = createRequire(import.meta.url);
+
+const isPackaged = typeof process.pkg !== 'undefined';
+const baseDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..', '..');
+
+const Database = isPackaged
+  ? require(path.join(baseDir, 'native_modules', 'better-sqlite3'))
+  : require('better-sqlite3');
+
+const dataDir = path.join(baseDir, 'data');
 const dbPath = path.join(dataDir, 'costume-manager.db');
 
 if (!fs.existsSync(dataDir)) {
@@ -14,7 +23,8 @@ if (!fs.existsSync(dataDir)) {
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
-const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
+const schemaPath = isPackaged ? path.join(baseDir, 'db', 'schema.sql') : path.join(__dirname, 'schema.sql');
+const schema = fs.readFileSync(schemaPath, 'utf-8');
 db.exec(schema);
 
 migrateCategoriesTable(db);
