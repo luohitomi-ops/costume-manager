@@ -6,3 +6,4 @@ data/
 Thumbs.db
 .dev-tools/*.png
 .superpowers/
+.worktrees/
