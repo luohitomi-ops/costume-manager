@@ -29,6 +29,15 @@ Two rounds of live spike-testing were done against this exact codebase before wr
 
 3. **`pkg`'s `package.json` config (`"pkg": { "targets": [...] }`) is silently ignored when `pkg` is invoked with an explicit file path** (`npx pkg build/bundle.cjs ...`) — it's only read when pkg is pointed at a directory/`package.json` (`npx pkg .`). Confirmed during Task 1: running the file-path form without an explicit `--targets` flag silently defaulted to whatever pkg's own default is (`node24-win-x64` at time of testing) instead of the configured `node22-win-x64`. Both targets happen to work fine (both have prebuilt binaries), so this didn't block Task 1 — but every `npx pkg build/bundle.cjs ...` command in this plan (Tasks 2-4) passes `--targets node22-win-x64` explicitly rather than relying on the config being picked up. Keep doing this in any command you add that invokes pkg this way.
 
+4. **A plain `cp -r node_modules/better-sqlite3 ...` is not enough for the packaged exe to load it, and the copied binary's ABI must match the pkg target, not the dev machine's Node version.** Discovered during Task 2's verification:
+   - `better-sqlite3` depends on `bindings@1.5.0` → `file-uri-to-path@1.0.0`, both hoisted to the top-level `node_modules/` in this project's flat install (confirmed via `npm ls better-sqlite3 bindings file-uri-to-path`) rather than nested under `node_modules/better-sqlite3/node_modules/`. Without copying them into that nested location alongside `better-sqlite3`, the packaged exe fails with `Cannot find module 'bindings'`.
+   - The `.node` binary that ships inside `node_modules/better-sqlite3/build/Release/` on the dev machine is compiled for whatever Node version is locally installed there (e.g. Node v24 → `NODE_MODULE_VERSION` 137) — not for the `node22-win-x64` target the exe actually runs as (`NODE_MODULE_VERSION` 127). Copying it as-is produces `ERR_DLOPEN_FAILED` at runtime on a correctly-packaged exe. **Verified fix:** run `better-sqlite3`'s own `prebuild-install` against the exact target version, from inside the copy that will ship (never against the real dev `node_modules/`, which would break local `npm run dev`):
+     ```bash
+     npx prebuild-install --target=22.23.1 --runtime=node --platform=win32 --arch=x64
+     ```
+     run with cwd set to the copied `better-sqlite3` folder. This was tested end-to-end in an isolated staging copy and confirmed to fetch and install a working `NODE_MODULE_VERSION` 127 binary. `22.23.1` is the exact Node point-release `node22-win-x64` currently resolves to (found via pkg's own binary cache, `~/.pkg-cache/v3.6/`) — if a future `npm install`/pkg update changes which patch version `node22-win-x64` resolves to, re-check the cache directory name and update this version string; the ABI (`NODE_MODULE_VERSION` 127) is what actually matters and is stable across Node 22.x patch releases, but `prebuild-install` in the version used here only accepts a version string via `--target`, not an ABI number directly.
+   - Both fixes are already folded into Task 3's manual verification commands above and must also be in Task 4's automated build script.
+
 ---
 
 ### Task 1: esbuild bundle + pkg packaging, verified standalone
@@ -326,10 +335,16 @@ mkdir -p /tmp/task3-verify
 npx pkg build/bundle.cjs --targets node22-win-x64 --output /tmp/task3-verify/costume-manager.exe
 mkdir -p /tmp/task3-verify/native_modules
 cp -r node_modules/better-sqlite3 /tmp/task3-verify/native_modules/better-sqlite3
+mkdir -p /tmp/task3-verify/native_modules/better-sqlite3/node_modules
+cp -r node_modules/bindings /tmp/task3-verify/native_modules/better-sqlite3/node_modules/bindings
+cp -r node_modules/file-uri-to-path /tmp/task3-verify/native_modules/better-sqlite3/node_modules/file-uri-to-path
+(cd /tmp/task3-verify/native_modules/better-sqlite3 && npx prebuild-install --target=22.23.1 --runtime=node --platform=win32 --arch=x64)
 mkdir -p /tmp/task3-verify/db
 cp build/schema.sql /tmp/task3-verify/db/schema.sql
 cp -r public /tmp/task3-verify/public
 ```
+
+(The `bindings`/`file-uri-to-path` copies and the `prebuild-install` step are required — see "Verified findings" item 4 below. Skipping them produces `Cannot find module 'bindings'` or a `NODE_MODULE_VERSION` ABI mismatch crash instead of a working server, discovered during Task 2.)
 
 Run from PowerShell/cmd:
 ```
@@ -360,7 +375,7 @@ git commit -m "Serve public/ from exe-relative path and auto-open browser when p
 
 **Interfaces:**
 - Consumes: `build/bundle.cjs` and `build/schema.sql` (produced by Task 1's `scripts/bundle.mjs`, which `build:exe` runs first).
-- Produces: `dist/costume-manager.exe`, `dist/native_modules/better-sqlite3/`, `dist/db/schema.sql`, `dist/public/` — the complete distributable folder, ready to zip. Never produces or touches `dist/data/` (that only gets created the first time a user, friend or developer, actually runs the exe).
+- Produces: `dist/costume-manager.exe`, `dist/native_modules/better-sqlite3/` (including its `node_modules/bindings` and `node_modules/file-uri-to-path`, and with its native binary replaced by the Node-22-ABI prebuilt via `prebuild-install` — see Verified findings item 4), `dist/db/schema.sql`, `dist/public/` — the complete distributable folder, ready to zip. Never produces or touches `dist/data/` (that only gets created the first time a user, friend or developer, actually runs the exe).
 
 - [ ] **Step 1: Add `dist/` and `build/` to `.gitignore`**
 
@@ -416,11 +431,27 @@ execSync(
   { stdio: 'inherit', cwd: root }
 );
 
-console.log('Copying better-sqlite3 native module...');
+console.log('Copying better-sqlite3 native module and its dependencies...');
 const nativeModuleDest = path.join(distDir, 'native_modules', 'better-sqlite3');
-fs.mkdirSync(path.dirname(nativeModuleDest), { recursive: true });
+fs.mkdirSync(nativeModuleDest, { recursive: true });
 fs.cpSync(path.join(root, 'node_modules', 'better-sqlite3'), nativeModuleDest, {
   recursive: true,
+});
+const nativeModuleDepsDest = path.join(nativeModuleDest, 'node_modules');
+fs.mkdirSync(nativeModuleDepsDest, { recursive: true });
+fs.cpSync(path.join(root, 'node_modules', 'bindings'), path.join(nativeModuleDepsDest, 'bindings'), {
+  recursive: true,
+});
+fs.cpSync(
+  path.join(root, 'node_modules', 'file-uri-to-path'),
+  path.join(nativeModuleDepsDest, 'file-uri-to-path'),
+  { recursive: true }
+);
+
+console.log('Fetching Node 22 ABI prebuilt binary for better-sqlite3 (dev machine Node version does not match the packaged target — see Verified findings item 4)...');
+execSync('npx prebuild-install --target=22.23.1 --runtime=node --platform=win32 --arch=x64', {
+  stdio: 'inherit',
+  cwd: nativeModuleDest,
 });
 
 console.log('Copying schema.sql...');
