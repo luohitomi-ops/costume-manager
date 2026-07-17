@@ -9,7 +9,9 @@
     "start": "node src/server.js",
     "test": "node --test tests/",
     "build:css": "tailwindcss -i ./src/input.css -o ./public/style.css --minify",
-    "watch:css": "tailwindcss -i ./src/input.css -o ./public/style.css --watch"
+    "watch:css": "tailwindcss -i ./src/input.css -o ./public/style.css --watch",
+    "bundle": "node scripts/bundle.mjs",
+    "build:exe": "node scripts/bundle.mjs && node scripts/build-exe.mjs"
   },
   "license": "MIT",
   "dependencies": {
@@ -18,8 +20,15 @@
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.2",
+    "@yao-pkg/pkg": "^6.21.0",
     "daisyui": "^5.6.17",
+    "esbuild": "^0.28.1",
     "playwright": "^1.61.1",
     "tailwindcss": "^4.3.2"
+  },
+  "pkg": {
+    "targets": [
+      "node22-win-x64"
+    ]
   }
 }
