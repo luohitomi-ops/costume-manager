@@ -34,11 +34,29 @@ fs.cpSync(
   { recursive: true }
 );
 
+console.log('Removing dev-machine-ABI binary before fetching the packaged target\'s ABI...');
+fs.rmSync(path.join(nativeModuleDest, 'build', 'Release'), { recursive: true, force: true });
+
 console.log('Fetching Node 22 ABI prebuilt binary for better-sqlite3 (dev machine Node version does not match the packaged target — see Verified findings item 4)...');
+// 22.23.1 is the exact Node point-release pkg's "node22-win-x64" target currently
+// resolves to (found via pkg's own binary cache directory name under ~/.pkg-cache/v3.6/).
+// The ABI (NODE_MODULE_VERSION 127) is what actually matters and is stable across all
+// Node 22.x patches, but prebuild-install needs a version string, not a bare ABI number.
+// If a future pkg/pkg-fetch update changes which patch version "node22-win-x64" resolves
+// to, and this exact version has no published better-sqlite3 prebuild, re-check the cache
+// directory name and update this string.
 execSync('npx prebuild-install --target=22.23.1 --runtime=node --platform=win32 --arch=x64', {
   stdio: 'inherit',
   cwd: nativeModuleDest,
 });
+
+const nativeBinaryPath = path.join(nativeModuleDest, 'build', 'Release', 'better_sqlite3.node');
+if (!fs.existsSync(nativeBinaryPath)) {
+  throw new Error(
+    `prebuild-install did not produce ${nativeBinaryPath} — the packaged exe would ship without a working native module. Aborting build.`
+  );
+}
+console.log('Confirmed ABI-matched better-sqlite3 binary present.');
 
 console.log('Copying schema.sql...');
 fs.mkdirSync(path.join(distDir, 'db'), { recursive: true });

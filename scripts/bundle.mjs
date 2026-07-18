@@ -1,16 +1,21 @@
 import { build } from 'esbuild';
 import { copyFileSync, mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-mkdirSync('build', { recursive: true });
-copyFileSync('src/db/schema.sql', 'build/schema.sql');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(__dirname, '..');
+
+mkdirSync(path.join(root, 'build'), { recursive: true });
+copyFileSync(path.join(root, 'src/db/schema.sql'), path.join(root, 'build/schema.sql'));
 
 await build({
-  entryPoints: ['src/server.js'],
+  entryPoints: [path.join(root, 'src/server.js')],
   bundle: true,
   platform: 'node',
   target: 'node22',
   format: 'cjs',
-  outfile: 'build/bundle.cjs',
+  outfile: path.join(root, 'build/bundle.cjs'),
   external: ['better-sqlite3'],
   // The source uses ESM's `fileURLToPath(import.meta.url)` to derive
   // __dirname. esbuild's cjs output format empties `import.meta` (it

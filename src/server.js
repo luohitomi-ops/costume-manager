@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import './db/connection.js';
 import charactersRouter from './routes/characters.js';
 import itemsRouter from './routes/items.js';
@@ -28,7 +28,7 @@ app.listen(PORT, () => {
   console.log(`Costume Manager running at ${url}`);
 
   if (isPackaged) {
-    exec(`start "" "${url}"`);
+    execFile('cmd', ['/c', 'start', '', url]);
   }
 });
 
