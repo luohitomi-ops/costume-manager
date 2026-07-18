@@ -16,6 +16,7 @@
 - No test framework exists in this project — verification is manual: run real commands against the real (already-provisioned) Turso database and a real Vercel deployment, inspect real output. This matches the project's existing convention.
 - Real credentials already exist and are verified working, stored in `C:\Users\USER\projects\costume-manager\.env.local` (gitignored, never committed): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `ACCESS_PASSWORD`. Tasks that need them read from this file — never hardcode a credential value into a committed file.
 - Vercel CLI is already authenticated locally as `YOUR-VERCEL-ACCOUNT`. Deployment needs a **brand new** Vercel project (do not reuse `your-other-vercel-project`, an unrelated React/Vite app under the same account).
+- **Path note (found during Task 3's execution):** this plan's `cd C:\Users\USER\projects\costume-manager` lines were written before execution moved into an isolated git worktree. Every such line means "the actual directory this task is executing in" — if you're running from a worktree (e.g. `.worktrees\cloud-personal-instance`), `cd` there instead, not to the literal main-repo path. Running a verification command against the wrong checkout would silently validate against old, unmodified code.
 
 ## Verified findings (read before starting)
 
