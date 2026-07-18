@@ -31,6 +31,11 @@ app.post('/login', (req, res) => {
 });
 
 app.use(requireAuth);
+
+app.get('/', (req, res) => {
+  res.redirect('/index.html');
+});
+
 app.use(express.static(path.join(baseDir, 'public')));
 
 app.use('/api/characters', charactersRouter);
