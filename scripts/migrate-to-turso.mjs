@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 
 const envPath = path.join(root, '.env.local');
 const env = fs.readFileSync(envPath, 'utf-8');
-env.split('\n').filter(Boolean).forEach((line) => {
+env.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line) => {
   const idx = line.indexOf('=');
   process.env[line.slice(0, idx)] = line.slice(idx + 1);
 });
@@ -31,30 +31,32 @@ if (existingChars.rows[0].n > 0) {
   process.exit(1);
 }
 
-console.log('Migrating categories (skipping the 6 already-seeded built-ins, migrating only custom ones)...');
 const localCategories = local.prepare('SELECT * FROM categories WHERE is_builtin = 0 ORDER BY sort_order').all();
+const localCharacters = local.prepare('SELECT * FROM characters ORDER BY id').all();
+const localItems = local.prepare('SELECT * FROM items ORDER BY id').all();
+
+console.log(
+  `Preparing ${localCategories.length} custom categories (skipping the 6 already-seeded built-ins), ${localCharacters.length} characters, ${localItems.length} items for atomic migration...`
+);
+
+const statements = [];
+
 for (const cat of localCategories) {
-  await client.execute({
+  statements.push({
     sql: 'INSERT INTO categories (slug, name, sort_order, is_builtin) VALUES (@slug, @name, @sort_order, @is_builtin)',
     args: cat,
   });
 }
-console.log(`Migrated ${localCategories.length} custom categories.`);
 
-console.log('Migrating characters...');
-const localCharacters = local.prepare('SELECT * FROM characters ORDER BY id').all();
 for (const char of localCharacters) {
-  await client.execute({
+  statements.push({
     sql: 'INSERT INTO characters (id, name, created_at) VALUES (@id, @name, @created_at)',
     args: char,
   });
 }
-console.log(`Migrated ${localCharacters.length} characters.`);
 
-console.log('Migrating items...');
-const localItems = local.prepare('SELECT * FROM items ORDER BY id').all();
 for (const item of localItems) {
-  await client.execute({
+  statements.push({
     sql: `INSERT INTO items
       (id, character_id, name, category, status, location, borrower, photo_path, note, active, created_at, updated_at)
       VALUES
@@ -62,6 +64,12 @@ for (const item of localItems) {
     args: item,
   });
 }
+
+console.log('Executing atomic batch...');
+await client.batch(statements, 'write');
+
+console.log(`Migrated ${localCategories.length} custom categories.`);
+console.log(`Migrated ${localCharacters.length} characters.`);
 console.log(`Migrated ${localItems.length} items.`);
 
 local.close();
