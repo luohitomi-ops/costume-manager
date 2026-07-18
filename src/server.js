@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { exec } from 'node:child_process';
 import './db/connection.js';
 import charactersRouter from './routes/characters.js';
 import itemsRouter from './routes/items.js';
@@ -9,9 +10,12 @@ import categoriesRouter from './routes/categories.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const isPackaged = typeof process.pkg !== 'undefined';
+const baseDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(baseDir, 'public')));
 
 app.use('/api/characters', charactersRouter);
 app.use('/api/items', itemsRouter);
@@ -20,7 +24,12 @@ app.use('/api', exportRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Costume Manager running at http://localhost:${PORT}`);
+  const url = `http://localhost:${PORT}`;
+  console.log(`Costume Manager running at ${url}`);
+
+  if (isPackaged) {
+    exec(`start "" "${url}"`);
+  }
 });
 
 export default app;
