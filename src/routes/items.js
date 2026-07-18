@@ -1,21 +1,18 @@
 import { Router } from 'express';
 import { createItem, searchItems, updateItem, getItemById } from '../models/item.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
 
-router.post('/', (req, res, next) => {
-  try {
-    const item = createItem(req.body || {});
-    res.status(201).json(item);
-  } catch (err) {
-    next(err);
-  }
-});
+router.post('/', asyncHandler(async (req, res) => {
+  const item = await createItem(req.body || {});
+  res.status(201).json(item);
+}));
 
-router.get('/', (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const { q, category, character_id, status, include_inactive } = req.query;
   res.json(
-    searchItems({
+    await searchItems({
       q,
       category,
       character_id,
@@ -23,20 +20,16 @@ router.get('/', (req, res) => {
       include_inactive: include_inactive === 'true',
     })
   );
-});
+}));
 
-router.patch('/:id', (req, res, next) => {
-  try {
-    const existing = getItemById(req.params.id);
-    if (!existing) {
-      return res.status(404).json({ error: 'item not found' });
-    }
-    const updated = updateItem(req.params.id, req.body || {});
-    res.json(updated);
-  } catch (err) {
-    next(err);
+router.patch('/:id', asyncHandler(async (req, res) => {
+  const existing = await getItemById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'item not found' });
   }
-});
+  const updated = await updateItem(req.params.id, req.body || {});
+  res.json(updated);
+}));
 
 // Central error handler for validation errors thrown by the model layer.
 router.use((err, req, res, next) => {

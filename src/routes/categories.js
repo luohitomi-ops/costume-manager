@@ -6,52 +6,37 @@ import {
   moveCategory,
   deleteCategory,
 } from '../models/category.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
 
-router.get('/', (req, res) => {
-  res.json(listCategories());
-});
+router.get('/', asyncHandler(async (req, res) => {
+  res.json(await listCategories());
+}));
 
-router.post('/', (req, res, next) => {
-  try {
-    const category = createCategory(req.body || {});
-    res.status(201).json(category);
-  } catch (err) {
-    next(err);
-  }
-});
+router.post('/', asyncHandler(async (req, res) => {
+  const category = await createCategory(req.body || {});
+  res.status(201).json(category);
+}));
 
-router.patch('/:slug', (req, res, next) => {
-  try {
-    const category = renameCategory(req.params.slug, req.body || {});
-    if (!category) return res.status(404).json({ error: 'category not found' });
-    res.json(category);
-  } catch (err) {
-    next(err);
-  }
-});
+router.patch('/:slug', asyncHandler(async (req, res) => {
+  const category = await renameCategory(req.params.slug, req.body || {});
+  if (!category) return res.status(404).json({ error: 'category not found' });
+  res.json(category);
+}));
 
-router.post('/:slug/move', (req, res, next) => {
-  try {
-    const { direction } = req.body || {};
-    const categories = moveCategory(req.params.slug, direction);
-    if (!categories) return res.status(404).json({ error: 'category not found' });
-    res.json(categories);
-  } catch (err) {
-    next(err);
-  }
-});
+router.post('/:slug/move', asyncHandler(async (req, res) => {
+  const { direction } = req.body || {};
+  const categories = await moveCategory(req.params.slug, direction);
+  if (!categories) return res.status(404).json({ error: 'category not found' });
+  res.json(categories);
+}));
 
-router.delete('/:slug', (req, res, next) => {
-  try {
-    const result = deleteCategory(req.params.slug);
-    if (!result) return res.status(404).json({ error: 'category not found' });
-    res.status(204).end();
-  } catch (err) {
-    next(err);
-  }
-});
+router.delete('/:slug', asyncHandler(async (req, res) => {
+  const result = await deleteCategory(req.params.slug);
+  if (!result) return res.status(404).json({ error: 'category not found' });
+  res.status(204).end();
+}));
 
 router.use((err, req, res, next) => {
   const status = err.status || 500;

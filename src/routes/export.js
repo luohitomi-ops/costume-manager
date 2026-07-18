@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { listCharacters } from '../models/character.js';
 import { allItemsWithCharacters } from '../models/item.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
 
@@ -25,9 +26,9 @@ function csvEscape(value) {
   return str;
 }
 
-router.get('/export', (req, res) => {
+router.get('/export', asyncHandler(async (req, res) => {
   const format = req.query.format === 'csv' ? 'csv' : 'json';
-  const items = allItemsWithCharacters();
+  const items = await allItemsWithCharacters();
 
   if (format === 'csv') {
     res.type('text/csv').send(toCsv(items));
@@ -35,9 +36,9 @@ router.get('/export', (req, res) => {
   }
 
   res.json({
-    characters: listCharacters(),
+    characters: await listCharacters(),
     items,
   });
-});
+}));
 
 export default router;
