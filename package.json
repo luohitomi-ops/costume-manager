@@ -17,6 +17,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "better-sqlite3": "^11.3.0",
+    "cookie-parser": "^1.4.7",
     "express": "^4.19.2"
   },
   "devDependencies": {

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="costume">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>服裝道具管家 — 登入</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-base-200 text-base-content font-sans m-0">
+  <div class="min-h-screen flex items-center justify-center">
+    <div class="card bg-base-100 shadow-xl p-8 w-full max-w-sm">
+      <h1 class="text-xl font-bold mb-4">服裝道具管家</h1>
+      <form id="login-form">
+        <label class="label"><span class="label-text">密碼</span></label>
+        <input type="password" id="password" class="input input-bordered w-full mb-4" autofocus>
+        <button type="submit" class="btn btn-primary w-full">登入</button>
+        <p id="error" class="text-error mt-2 hidden">密碼錯誤</p>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        document.getElementById('error').classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

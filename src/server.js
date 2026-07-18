@@ -1,33 +1,12 @@
-import express from 'express';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
-import './db/connection.js';
-import charactersRouter from './routes/characters.js';
-import itemsRouter from './routes/items.js';
-import exportRouter from './routes/export.js';
-import categoriesRouter from './routes/categories.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const isPackaged = typeof process.pkg !== 'undefined';
-const baseDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
-
-const app = express();
-app.use(express.json());
-app.use(express.static(path.join(baseDir, 'public')));
-
-app.use('/api/characters', charactersRouter);
-app.use('/api/items', itemsRouter);
-app.use('/api/categories', categoriesRouter);
-app.use('/api', exportRouter);
+import app from './app.js';
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log(`Costume Manager running at ${url}`);
 
-  if (isPackaged) {
+  if (typeof process.pkg !== 'undefined') {
     execFile('cmd', ['/c', 'start', '', url]);
   }
 });
