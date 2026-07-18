@@ -12,7 +12,8 @@ function badRequest(message) {
 /**
  * Enforces the status/location/borrower rules from data-model.md:
  * in_storage requires location and no borrower; lent_out requires borrower
- * and no location; unassigned requires neither.
+ * and no location; unassigned requires neither. Does not touch the
+ * database — stays synchronous, do not await calls to this function.
  */
 export function validateStatusFields({ status, location, borrower }) {
   const s = status || 'unassigned';
@@ -32,12 +33,12 @@ export function validateStatusFields({ status, location, borrower }) {
   return s;
 }
 
-export function createItem(input) {
+export async function createItem(input) {
   const { character_id, name, category, photo_path = null, note = null } = input;
 
   if (!character_id) throw badRequest('character_id is required');
   if (!name || !name.trim()) throw badRequest('name is required');
-  if (!categoryExists(category)) {
+  if (!(await categoryExists(category))) {
     throw badRequest('category does not exist');
   }
 
@@ -45,28 +46,28 @@ export function createItem(input) {
   const location = status === 'in_storage' ? input.location : null;
   const borrower = status === 'lent_out' ? input.borrower : null;
 
-  const stmt = db.prepare(`
-    INSERT INTO items (character_id, name, category, status, location, borrower, photo_path, note)
-    VALUES (@character_id, @name, @category, @status, @location, @borrower, @photo_path, @note)
-  `);
-  const info = stmt.run({
-    character_id,
-    name: name.trim(),
-    category,
-    status,
-    location,
-    borrower,
-    photo_path,
-    note,
-  });
+  const info = await db.run(
+    `INSERT INTO items (character_id, name, category, status, location, borrower, photo_path, note)
+     VALUES (@character_id, @name, @category, @status, @location, @borrower, @photo_path, @note)`,
+    {
+      character_id,
+      name: name.trim(),
+      category,
+      status,
+      location,
+      borrower,
+      photo_path,
+      note,
+    }
+  );
   return getItemById(info.lastInsertRowid);
 }
 
-export function getItemById(id) {
-  return db.prepare('SELECT * FROM items WHERE id = ?').get(id);
+export async function getItemById(id) {
+  return db.get('SELECT * FROM items WHERE id = ?', [id]);
 }
 
-export function searchItems({ q, category, character_id, status, include_inactive } = {}) {
+export async function searchItems({ q, category, character_id, status, include_inactive } = {}) {
   const clauses = [];
   const params = {};
 
@@ -91,15 +92,15 @@ export function searchItems({ q, category, character_id, status, include_inactiv
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-  return db.prepare(`SELECT * FROM items ${where} ORDER BY name`).all(params);
+  return db.all(`SELECT * FROM items ${where} ORDER BY name`, params);
 }
 
-export function listItemsForCharacter(characterId, { include_inactive } = {}) {
+export async function listItemsForCharacter(characterId, { include_inactive } = {}) {
   return searchItems({ character_id: characterId, include_inactive });
 }
 
-export function updateItem(id, patch) {
-  const existing = getItemById(id);
+export async function updateItem(id, patch) {
+  const existing = await getItemById(id);
   if (!existing) return null;
 
   const merged = {
@@ -122,24 +123,25 @@ export function updateItem(id, patch) {
   const note = patch.note !== undefined ? patch.note : existing.note;
   const photo_path = patch.photo_path !== undefined ? patch.photo_path : existing.photo_path;
 
-  db.prepare(`
-    UPDATE items
-    SET status = @status, location = @location, borrower = @borrower,
-        active = @active, note = @note, photo_path = @photo_path,
-        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-    WHERE id = @id
-  `).run({ id, status, location, borrower, active, note, photo_path });
+  await db.run(
+    `UPDATE items
+     SET status = @status, location = @location, borrower = @borrower,
+         active = @active, note = @note, photo_path = @photo_path,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE id = @id`,
+    { id, status, location, borrower, active, note, photo_path }
+  );
 
   return getItemById(id);
 }
 
-export function allItemsWithCharacters() {
-  return db.prepare(`
+export async function allItemsWithCharacters() {
+  return db.all(`
     SELECT items.*, characters.name AS character_name
     FROM items
     JOIN characters ON characters.id = items.character_id
     ORDER BY characters.name, items.name
-  `).all();
+  `);
 }
 
 export { STATUSES };

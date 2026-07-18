@@ -1,20 +1,19 @@
 import db from '../db/connection.js';
 
-export function createCharacter({ name }) {
+export async function createCharacter({ name }) {
   if (!name || !name.trim()) {
     const err = new Error('name is required');
     err.status = 400;
     throw err;
   }
-  const stmt = db.prepare('INSERT INTO characters (name) VALUES (?)');
-  const info = stmt.run(name.trim());
+  const info = await db.run('INSERT INTO characters (name) VALUES (?)', [name.trim()]);
   return getCharacterById(info.lastInsertRowid);
 }
 
-export function listCharacters() {
-  return db.prepare('SELECT * FROM characters ORDER BY name').all();
+export async function listCharacters() {
+  return db.all('SELECT * FROM characters ORDER BY name');
 }
 
-export function getCharacterById(id) {
-  return db.prepare('SELECT * FROM characters WHERE id = ?').get(id);
+export async function getCharacterById(id) {
+  return db.get('SELECT * FROM characters WHERE id = ?', [id]);
 }
