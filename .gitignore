@@ -9,3 +9,4 @@ Thumbs.db
 .worktrees/
 dist/
 build/
+.vercel/
