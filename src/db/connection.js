@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { createClient } from '@libsql/client';
+import { createLocalDriver } from './drivers/local.js';
+import { createTursoDriver } from './drivers/turso.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -9,26 +12,40 @@ const require = createRequire(import.meta.url);
 const isPackaged = typeof process.pkg !== 'undefined';
 const baseDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..', '..');
 
-const Database = isPackaged
-  ? require(path.join(baseDir, 'native_modules', 'better-sqlite3'))
-  : require('better-sqlite3');
+const driverName = process.env.DB_DRIVER === 'turso' ? 'turso' : 'local';
 
-const dataDir = path.join(baseDir, 'data');
-const dbPath = path.join(dataDir, 'costume-manager.db');
+let db;
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+if (driverName === 'turso') {
+  const client = createClient({
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+  db = createTursoDriver(client);
+} else {
+  const Database = isPackaged
+    ? require(path.join(baseDir, 'native_modules', 'better-sqlite3'))
+    : require('better-sqlite3');
+
+  const dataDir = path.join(baseDir, 'data');
+  const dbPath = path.join(dataDir, 'costume-manager.db');
+
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  const sqliteDb = new Database(dbPath);
+  sqliteDb.pragma('journal_mode = WAL');
+
+  const schemaPath = isPackaged ? path.join(baseDir, 'db', 'schema.sql') : path.join(__dirname, 'schema.sql');
+  const schema = fs.readFileSync(schemaPath, 'utf-8');
+  sqliteDb.exec(schema);
+
+  migrateCategoriesTable(sqliteDb);
+  migrateItemsCategoryCheckRemoval(sqliteDb);
+
+  db = createLocalDriver(sqliteDb);
 }
-
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-
-const schemaPath = isPackaged ? path.join(baseDir, 'db', 'schema.sql') : path.join(__dirname, 'schema.sql');
-const schema = fs.readFileSync(schemaPath, 'utf-8');
-db.exec(schema);
-
-migrateCategoriesTable(db);
-migrateItemsCategoryCheckRemoval(db);
 
 /**
  * Categories used to be a fixed hardcoded list; this creates the real
@@ -37,7 +54,9 @@ migrateItemsCategoryCheckRemoval(db);
  * IF NOT EXISTS — that would create an empty table with no seed rows on a
  * brand-new database, and this function's "does the table exist" check
  * would then skip seeding forever. This is the single source of truth for
- * both fresh installs and upgrades.
+ * both fresh installs and upgrades. Local driver only — a fresh Turso
+ * database is set up once via scripts/setup-turso-schema.mjs (Task 6),
+ * not on every boot.
  */
 function migrateCategoriesTable(database) {
   const row = database
@@ -73,9 +92,7 @@ function migrateCategoriesTable(database) {
  * so items.category can no longer be a fixed CHECK-constrained enum.
  * SQLite can't ALTER a CHECK constraint in place, so this rebuilds the
  * items table once (same rebuild-and-copy technique used previously) to
- * drop the constraint entirely. Supersedes the old lens/other-widening
- * migration from the previous feature — this one removes the CHECK clause
- * altogether rather than widening its list.
+ * drop the constraint entirely. Local driver only, same reasoning as above.
  */
 function migrateItemsCategoryCheckRemoval(database) {
   const row = database
