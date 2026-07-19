@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { createClient } from '@libsql/client';
 import { createLocalDriver } from './drivers/local.js';
 import { createTursoDriver } from './drivers/turso.js';
 
@@ -17,6 +16,12 @@ const driverName = process.env.DB_DRIVER === 'turso' ? 'turso' : 'local';
 let db;
 
 if (driverName === 'turso') {
+  // Loaded lazily (never at the top of the file) so the packaged/local-only
+  // build never touches this at all — @libsql/client's own module-load-time
+  // code pulls in a platform-specific native binary that pkg's snapshot
+  // can't embed, which crashed every packaged build with "Cannot find
+  // module '@libsql/win32-x64-msvc'" even though the exe never uses it.
+  const { createClient } = require('@libsql/client');
   const client = createClient({
     url: process.env.TURSO_DATABASE_URL,
     authToken: process.env.TURSO_AUTH_TOKEN,

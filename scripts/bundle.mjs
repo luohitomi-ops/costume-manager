@@ -16,7 +16,11 @@ await build({
   target: 'node22',
   format: 'cjs',
   outfile: path.join(root, 'build/bundle.cjs'),
-  external: ['better-sqlite3'],
+  // @libsql/client is only ever require()'d lazily inside connection.js's
+  // turso branch (never reached in the packaged/local-only build) — kept
+  // external so esbuild doesn't inline its own problematic dynamic
+  // platform-binary require into the bundle pkg has to snapshot.
+  external: ['better-sqlite3', '@libsql/client'],
   // The source uses ESM's `fileURLToPath(import.meta.url)` to derive
   // __dirname. esbuild's cjs output format empties `import.meta` (it
   // has no CJS equivalent), which made every such call crash at
