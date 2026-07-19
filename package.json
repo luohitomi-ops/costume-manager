@@ -11,14 +11,16 @@
     "build:css": "tailwindcss -i ./src/input.css -o ./public/style.css --minify",
     "watch:css": "tailwindcss -i ./src/input.css -o ./public/style.css --watch",
     "bundle": "node scripts/bundle.mjs",
-    "build:exe": "node scripts/bundle.mjs && node scripts/build-exe.mjs"
+    "build:exe": "node scripts/bundle.mjs && node scripts/build-exe.mjs",
+    "postinstall": "node scripts/copy-vendor-assets.mjs"
   },
   "license": "MIT",
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "better-sqlite3": "^11.3.0",
     "cookie-parser": "^1.4.7",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.2",
