@@ -24,6 +24,12 @@
     </form>
   </section>
 
+  <section class="card relative bg-base-100 shadow-md p-6" style="border:1px solid #E4DBC5;border-radius:1.625rem">
+    <h2 class="font-bold text-base-content m-0 mb-4">角色管理</h2>
+    <ul id="character-list" class="flex flex-col gap-2 list-none p-0 m-0"></ul>
+    <p id="character-error" class="text-sm text-center py-3 mt-3 hidden" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem"></p>
+  </section>
+
 </div>
 
 <nav class="fixed left-0 right-0 bottom-0 z-20 flex justify-center gap-8 bg-base-100 px-4 py-2 shadow-[0_-4px_16px_rgba(55,51,44,0.06)]" style="border-top:1px solid #E4DBC5" aria-label="主要導覽">
@@ -186,7 +192,63 @@ document.getElementById('category-add-form').addEventListener('submit', async (e
   await refreshCategories();
 });
 
+async function fetchCharacterList() {
+  const res = await fetch('/api/characters');
+  if (!res.ok) throw new Error('characters fetch failed');
+  return res.json();
+}
+
+function renderCharacterList(characters) {
+  const list = document.getElementById('character-list');
+  if (characters.length === 0) {
+    list.innerHTML = '<li class="text-sm text-center py-3" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem">尚未新增角色</li>';
+    return;
+  }
+  list.innerHTML = characters
+    .map(
+      (c) => `
+        <li class="flex items-center justify-between gap-3 px-3 py-2 rounded-xl" style="background:#F2ECDE;border:1px solid #E4DBC5" data-char-id="${c.id}">
+          <span class="character-name">${c.name}</span>
+          <button type="button" class="btn-delete-character h-8 min-h-0 px-2" style="color:#D98A4E" title="刪除">刪除</button>
+        </li>
+      `
+    )
+    .join('');
+
+  list.querySelectorAll('li').forEach((li) => {
+    const id = li.dataset.charId;
+    const name = li.querySelector('.character-name').textContent;
+    li.querySelector('.btn-delete-character').addEventListener('click', () => deleteCharacterRow(id, name));
+  });
+}
+
+async function refreshCharacterList() {
+  const errorEl = document.getElementById('character-error');
+  try {
+    const characters = await fetchCharacterList();
+    errorEl.classList.add('hidden');
+    renderCharacterList(characters);
+  } catch (err) {
+    errorEl.textContent = '資料載入失敗，請重新整理頁面。';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+async function deleteCharacterRow(id, name) {
+  if (!window.confirm(`確定要刪除「${name}」嗎？這個角色底下的所有服裝道具也會一起被刪除，此動作無法復原`)) return;
+  const res = await fetch(`/api/characters/${id}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json();
+    const errorEl = document.getElementById('character-error');
+    errorEl.textContent = err.error;
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  await refreshCharacterList();
+}
+
 refreshCategories();
+refreshCharacterList();
 </script>
 </body>
 </html>
