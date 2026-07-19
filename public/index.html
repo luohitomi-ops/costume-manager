@@ -21,6 +21,10 @@
     <p class="text-[0.95rem]" style="color:#8B8374">登記一次，翻箱倒櫃找東西再也不用花時間。</p>
   </header>
 
+  <div class="relative z-10 flex justify-center mb-6">
+    <button id="export-image-button" type="button" class="btn btn-secondary h-11 min-h-0">下載所有服裝道具圖片</button>
+  </div>
+
   <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 items-start">
 
     <section class="card--character card relative bg-base-100 shadow-md p-6 overflow-hidden" style="border:1px solid #E4DBC5;border-radius:1.625rem">
@@ -143,6 +147,14 @@
   </footer>
 </div>
 
+<div id="export-capture" style="position:fixed;left:-9999px;top:0;width:720px;background:#FBF8F1;padding:32px;font-family:inherit;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <h1 style="font-size:1.5rem;font-weight:700;color:#37332C;margin:0 0 4px;">服裝道具管家</h1>
+    <p id="export-date" style="font-size:0.85rem;color:#8B8374;margin:0;"></p>
+  </div>
+  <div id="export-groups"></div>
+</div>
+
 <nav class="fixed left-0 right-0 bottom-0 z-20 flex justify-center gap-8 bg-base-100 px-4 py-2 shadow-[0_-4px_16px_rgba(55,51,44,0.06)]" style="border-top:1px solid #E4DBC5" aria-label="主要導覽">
   <a href="index.html" class="nav-item is-active flex flex-col items-center gap-1 px-3 py-1 text-xs" id="nav-home">
     <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg>
@@ -165,6 +177,7 @@
   .cs-option:hover, .cs-option[aria-selected="true"] { background: #E7EEE2; }
 </style>
 
+<script src="vendor/html2canvas.min.js"></script>
 <script src="shared.js"></script>
 <script>
 function initCustomSelect(root) {
@@ -328,6 +341,58 @@ function renderList(elementId, items, emptyMessage) {
 
 loadCategoryOptions();
 refreshCharacterDropdowns();
+
+function renderExportCapture(characters, items) {
+  document.getElementById('export-date').textContent = `匯出時間：${new Date().toLocaleString('zh-TW')}`;
+
+  const itemsByCharacter = new Map();
+  for (const item of items) {
+    if (!itemsByCharacter.has(item.character_id)) itemsByCharacter.set(item.character_id, []);
+    itemsByCharacter.get(item.character_id).push(item);
+  }
+
+  const groupsHtml = characters
+    .map((character) => {
+      const characterItems = itemsByCharacter.get(character.id) || [];
+      if (characterItems.length === 0) return '';
+      return `
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:1.1rem;font-weight:700;color:#3F5C46;margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid #E4DBC5;">${character.name}</h2>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;">
+            ${characterItems.map((item) => itemToLine(item, categoryLabels)).join('')}
+          </ul>
+        </div>
+      `;
+    })
+    .join('');
+
+  document.getElementById('export-groups').innerHTML =
+    groupsHtml || '<p style="text-align:center;color:#8B8374;">尚未登記任何服裝道具</p>';
+}
+
+document.getElementById('export-image-button').addEventListener('click', async () => {
+  const btn = document.getElementById('export-image-button');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '產生圖片中…';
+  try {
+    const { characters, items } = await fetch('/api/export').then((r) => r.json());
+    renderExportCapture(characters, items);
+    const canvas = await html2canvas(document.getElementById('export-capture'), {
+      backgroundColor: '#FBF8F1',
+      scale: 2,
+    });
+    const link = document.createElement('a');
+    link.download = `服裝道具清單-${new Date().toISOString().slice(0, 10)}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    alert('產生圖片失敗，請稍後再試。');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+});
 </script>
 </body>
 </html>
