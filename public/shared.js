@@ -13,7 +13,7 @@ function categoryIcon(slug) {
   return BUILTIN_CATEGORY_ICONS[slug] || DEFAULT_CATEGORY_ICON;
 }
 
-function itemToLine(item, categoryLabels) {
+function itemToLine(item, categoryLabels, extraHtml = '') {
   const isLent = item.status === 'lent_out';
   const where = item.status === 'in_storage'
     ? `收納於：${item.location}`
@@ -27,6 +27,7 @@ function itemToLine(item, categoryLabels) {
         ${item.name}
       </span>
       <span class="status-line text-sm ${isLent ? 'lent font-semibold' : ''}" style="color:${isLent ? '#D98A4E' : '#8B8374'}">${where}</span>
+      ${extraHtml}
     </li>
   `;
 }

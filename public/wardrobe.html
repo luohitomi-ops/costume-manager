@@ -103,6 +103,10 @@ function groupByCharacter(items) {
   return map;
 }
 
+function itemDeleteButtonHtml(item) {
+  return `<button type="button" class="btn-delete-item h-8 min-h-0 px-2" data-item-id="${item.id}" style="color:#D98A4E" title="刪除道具">刪除</button>`;
+}
+
 function renderWardrobe() {
   const list = document.getElementById('wardrobe-list');
   const rows = allCharacters
@@ -123,7 +127,7 @@ function renderWardrobe() {
           <svg class="w-5 h-5 shrink-0" style="color:#8B8374;transform:rotate(${isOpen ? '180deg' : '0deg'})" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <ul class="flex flex-col gap-2 px-6 pb-6 m-0 list-none ${isOpen ? '' : 'hidden'}">
-          ${items.map((item) => itemToLine(item, categoryLabels)).join('')}
+          ${items.map((item) => itemToLine(item, categoryLabels, itemDeleteButtonHtml(item))).join('')}
         </ul>
       </section>
     `;
@@ -135,6 +139,14 @@ function renderWardrobe() {
       if (expandedIds.has(id)) expandedIds.delete(id);
       else expandedIds.add(id);
       renderWardrobe();
+    });
+  });
+
+  list.querySelectorAll('.btn-delete-item').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!window.confirm('確定要刪除這個道具嗎？此動作無法復原')) return;
+      await fetch(`/api/items/${btn.dataset.itemId}`, { method: 'DELETE' });
+      await refreshItems();
     });
   });
 }
