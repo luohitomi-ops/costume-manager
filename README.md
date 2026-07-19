@@ -1,5 +1,7 @@
 # Costume Manager
 
+[繁體中文說明](README.zh-TW.md)
+
 A self-hostable inventory tracker for cosplayers: register costumes, wigs,
 shoes, and props against a character, and instantly find where any item
 currently is (in storage, or lent out to someone).
