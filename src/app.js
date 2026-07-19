@@ -30,7 +30,13 @@ app.post('/login', (req, res) => {
   res.status(401).json({ error: 'wrong password' });
 });
 
-app.use(requireAuth);
+// Local self-hosting is designed to run with no password at all (see
+// README's "Option A"); the password gate only makes sense once an
+// ACCESS_PASSWORD is actually configured, which is the deploy-your-own
+// cloud path (README's "Option B").
+if (process.env.ACCESS_PASSWORD) {
+  app.use(requireAuth);
+}
 
 app.get('/', (req, res) => {
   res.redirect('/index.html');
