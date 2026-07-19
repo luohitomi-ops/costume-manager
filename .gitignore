@@ -2,6 +2,7 @@ node_modules/
 data/
 *.log
 .env*
+!.env.example
 .DS_Store
 Thumbs.db
 .dev-tools/*.png

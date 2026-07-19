@@ -159,6 +159,14 @@ only one live copy after migration — this isn't a sync problem).
 **Goal:** a technically-capable cosplayer (or one getting AI help) can find
 the project publicly, clone it, and run it themselves.
 
+**Scope expanded 2026-07-19** (after Project 3 shipped and merged to
+master): since the cloud deployment code now lives in the same repo, the
+open-source release covers two paths, not one — self-host locally
+(original scope) *and* deploy-your-own cloud instance (clone → own Turso
+account → own Vercel project → own password), so a friend can get her own
+independent cloud copy without ever touching the original author's
+password or database.
+
 **Approach:**
 - Push the existing local git history to a new public GitHub repository.
   **Actually pushing is a publish action and will be confirmed with the
@@ -166,11 +174,27 @@ the project publicly, clone it, and run it themselves.
 - Verified already: `data/` has been in `.gitignore` since the initial
   commit and no personal data file has ever been tracked or appears in
   git history — safe to make the repo public as-is on that front.
-- Light README pass: add explicit framing ("self-hosted, your data never
-  leaves your computer, no account/cloud required") near the top, confirm
-  Node.js version prerequisite is stated, keep the existing
-  install/run instructions (`npm install` / `npm run dev`) — they already
-  match this audience's skill level.
+- **2026-07-19 addendum:** a second pre-publish scan (beyond the `data/`
+  check above) found the user's real Vercel account handle (matching her
+  email's local part) hardcoded in two tracked planning docs
+  (`docs/superpowers/plans/2026-07-18-cloud-personal-instance.md`,
+  this spec's own Project 3 section). Full history was rewritten with
+  `git filter-repo --replace-text` (all 38 commits, new hashes) to
+  replace that handle and the two Vercel project/team names it appeared
+  alongside with generic placeholders, before any push. A full working
+  copy of the pre-rewrite repo was kept at
+  `C:\Users\USER\projects\costume-manager-backup-before-history-rewrite`
+  in case anything needed recovering. No secrets/tokens were found in
+  this pass — only this one identity-linking handle.
+- `.env.example` added (real env vars used gitignored `.env.local`, no
+  template existed before) documenting `DB_DRIVER` / `TURSO_DATABASE_URL`
+  / `TURSO_AUTH_TOKEN` / `ACCESS_PASSWORD` for the deploy-your-own path.
+- README rewritten with two clearly separated paths: "Option A: Run it
+  locally" (original scope, unchanged instructions) and "Option B: Deploy
+  your own cloud instance" (new — `.env.local` setup, one-time schema
+  script, optional data migration script, Vercel env vars + deploy),
+  explicit framing that data always stays under the runner's own control
+  either way, and nothing is ever sent to the original author.
 - No packaging work for this audience — they run from source.
 - `LICENSE`: already MIT via `package.json`, no change needed.
 
