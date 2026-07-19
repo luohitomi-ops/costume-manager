@@ -145,8 +145,15 @@ function renderWardrobe() {
   list.querySelectorAll('.btn-delete-item').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!window.confirm('確定要刪除這個道具嗎？此動作無法復原')) return;
-      await fetch(`/api/items/${btn.dataset.itemId}`, { method: 'DELETE' });
-      await refreshItems();
+      const errorEl = document.getElementById('wardrobe-error');
+      try {
+        const res = await fetch(`/api/items/${btn.dataset.itemId}`, { method: 'DELETE' });
+        if (!res.ok && res.status !== 204) throw new Error('delete failed');
+        errorEl.classList.add('hidden');
+        await refreshItems();
+      } catch (err) {
+        errorEl.classList.remove('hidden');
+      }
     });
   });
 }
