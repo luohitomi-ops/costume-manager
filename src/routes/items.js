@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createItem, searchItems, updateItem, getItemById } from '../models/item.js';
+import { createItem, searchItems, updateItem, getItemById, deleteItem } from '../models/item.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
@@ -29,6 +29,12 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   }
   const updated = await updateItem(req.params.id, req.body || {});
   res.json(updated);
+}));
+
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const result = await deleteItem(req.params.id);
+  if (!result) return res.status(404).json({ error: 'item not found' });
+  res.status(204).end();
 }));
 
 // Central error handler for validation errors thrown by the model layer.

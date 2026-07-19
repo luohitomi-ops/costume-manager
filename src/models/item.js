@@ -135,6 +135,13 @@ export async function updateItem(id, patch) {
   return getItemById(id);
 }
 
+export async function deleteItem(id) {
+  const existing = await getItemById(id);
+  if (!existing) return null;
+  await db.run('DELETE FROM items WHERE id = ?', [id]);
+  return true;
+}
+
 export async function allItemsWithCharacters() {
   return db.all(`
     SELECT items.*, characters.name AS character_name

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createCharacter, listCharacters, getCharacterById } from '../models/character.js';
+import { createCharacter, listCharacters, getCharacterById, deleteCharacter } from '../models/character.js';
 import { listItemsForCharacter } from '../models/item.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 
@@ -21,6 +21,12 @@ router.get('/:id/items', asyncHandler(async (req, res) => {
   }
   const includeInactive = req.query.include_inactive === 'true';
   res.json(await listItemsForCharacter(req.params.id, { include_inactive: includeInactive }));
+}));
+
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const result = await deleteCharacter(req.params.id);
+  if (!result) return res.status(404).json({ error: 'character not found' });
+  res.status(204).end();
 }));
 
 export default router;

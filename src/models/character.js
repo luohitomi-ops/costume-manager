@@ -17,3 +17,13 @@ export async function listCharacters() {
 export async function getCharacterById(id) {
   return db.get('SELECT * FROM characters WHERE id = ?', [id]);
 }
+
+export async function deleteCharacter(id) {
+  const existing = await getCharacterById(id);
+  if (!existing) return null;
+  await db.batch([
+    { sql: 'DELETE FROM items WHERE character_id = ?', params: [id] },
+    { sql: 'DELETE FROM characters WHERE id = ?', params: [id] },
+  ]);
+  return true;
+}
