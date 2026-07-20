@@ -16,9 +16,9 @@ function categoryIcon(slug) {
 function itemToLine(item, categoryLabels, extraHtml = '') {
   const isLent = item.status === 'lent_out';
   const where = item.status === 'in_storage'
-    ? `收納於：${item.location}`
+    ? `收納於：${item.location || '（未指定位置）'}`
     : isLent
-      ? `借給：${item.borrower}`
+      ? `借給：${item.borrower || '（未指定對象）'}`
       : '尚未指定位置';
   return `
     <li class="flex items-center justify-between gap-3 flex-wrap px-3 py-2 text-sm rounded-xl" style="background:#F2ECDE;border:1px solid #E4DBC5">

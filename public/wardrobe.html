@@ -71,6 +71,7 @@ let allCharacters = [];
 let currentItemsByChar = new Map();
 let categoryLabels = {};
 const expandedIds = new Set();
+let editingItemId = null;
 
 async function loadCategories() {
   const categories = await fetch('/api/categories').then((r) => r.json());
@@ -105,8 +106,33 @@ function groupByCharacter(items) {
   return map;
 }
 
-function itemDeleteButtonHtml(item) {
-  return `<button type="button" class="btn-delete-item h-8 min-h-0 px-2" data-item-id="${item.id}" style="color:#D98A4E" title="刪除道具">刪除</button>`;
+function itemActionButtonsHtml(item) {
+  return `
+    <button type="button" class="btn-edit-item h-8 min-h-0 px-2" data-item-id="${item.id}" style="color:#3F5C46" title="編輯">編輯</button>
+    <button type="button" class="btn-delete-item h-8 min-h-0 px-2" data-item-id="${item.id}" style="color:#D98A4E" title="刪除道具">刪除</button>
+  `;
+}
+
+function itemEditFormHtml(item) {
+  const currentValue = item.location || item.borrower || '';
+  return `
+    <li class="flex flex-col gap-2 px-3 py-3 text-sm rounded-xl" style="background:#F2ECDE;border:1px solid #E4DBC5" data-item-id="${item.id}">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="category-tag inline-block text-xs font-semibold px-2 py-0.5 rounded-full" style="background:#F6E2C9;color:#D98A4E">${categoryLabels[item.category] || item.category}</span>
+        <span class="font-semibold">${item.name}</span>
+      </div>
+      <select class="edit-status select w-full h-9 min-h-0" style="background:#FBF8F1;border-color:#E4DBC5">
+        <option value="unassigned" ${item.status === 'unassigned' ? 'selected' : ''}>尚未指定位置</option>
+        <option value="in_storage" ${item.status === 'in_storage' ? 'selected' : ''}>收納中</option>
+        <option value="lent_out" ${item.status === 'lent_out' ? 'selected' : ''}>已借出</option>
+      </select>
+      <input type="text" class="edit-location-or-borrower input w-full h-9 min-h-0" placeholder="收納位置或借給誰（選填）" value="${currentValue}" style="background:#FBF8F1;border-color:#E4DBC5">
+      <div class="flex gap-2">
+        <button type="button" class="btn-save-edit btn btn-primary h-9 min-h-0 flex-1" data-item-id="${item.id}">儲存</button>
+        <button type="button" class="btn-cancel-edit h-9 min-h-0 px-3" data-item-id="${item.id}">取消</button>
+      </div>
+    </li>
+  `;
 }
 
 function renderWardrobe() {
@@ -129,7 +155,13 @@ function renderWardrobe() {
           <svg class="w-5 h-5 shrink-0" style="color:#8B8374;transform:rotate(${isOpen ? '180deg' : '0deg'})" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <ul class="flex flex-col gap-2 px-6 pb-6 m-0 list-none ${isOpen ? '' : 'hidden'}">
-          ${items.map((item) => itemToLine(item, categoryLabels, itemDeleteButtonHtml(item))).join('')}
+          ${items
+            .map((item) =>
+              item.id === editingItemId
+                ? itemEditFormHtml(item)
+                : itemToLine(item, categoryLabels, itemActionButtonsHtml(item))
+            )
+            .join('')}
         </ul>
       </section>
     `;
@@ -152,6 +184,54 @@ function renderWardrobe() {
         const res = await fetch(`/api/items/${btn.dataset.itemId}`, { method: 'DELETE' });
         if (!res.ok && res.status !== 204) throw new Error('delete failed');
         errorEl.classList.add('hidden');
+        await refreshItems();
+      } catch (err) {
+        errorEl.classList.remove('hidden');
+      }
+    });
+  });
+
+  list.querySelectorAll('.btn-edit-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      editingItemId = Number(btn.dataset.itemId);
+      renderWardrobe();
+    });
+  });
+
+  list.querySelectorAll('.btn-cancel-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      editingItemId = null;
+      renderWardrobe();
+    });
+  });
+
+  list.querySelectorAll('.btn-save-edit').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const li = btn.closest('li');
+      const status = li.querySelector('.edit-status').value;
+      const value = li.querySelector('.edit-location-or-borrower').value.trim();
+      const body = { status };
+      if (status === 'in_storage') {
+        body.location = value || null;
+        body.borrower = null;
+      } else if (status === 'lent_out') {
+        body.borrower = value || null;
+        body.location = null;
+      } else {
+        body.location = null;
+        body.borrower = null;
+      }
+
+      const errorEl = document.getElementById('wardrobe-error');
+      try {
+        const res = await fetch(`/api/items/${btn.dataset.itemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error('update failed');
+        errorEl.classList.add('hidden');
+        editingItemId = null;
         await refreshItems();
       } catch (err) {
         errorEl.classList.remove('hidden');

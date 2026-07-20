@@ -10,10 +10,13 @@ function badRequest(message) {
 }
 
 /**
- * Enforces the status/location/borrower rules from data-model.md:
- * in_storage requires location and no borrower; lent_out requires borrower
- * and no location; unassigned requires neither. Does not touch the
- * database — stays synchronous, do not await calls to this function.
+ * Enforces the status/location/borrower cross-field rule: the field that
+ * doesn't apply to the current status must be empty (in_storage carries no
+ * borrower, lent_out carries no location, unassigned carries neither). Both
+ * location and borrower are optional even when their matching status is
+ * set — you can mark something in_storage without knowing exactly where
+ * yet. Does not touch the database — stays synchronous, do not await calls
+ * to this function.
  */
 export function validateStatusFields({ status, location, borrower }) {
   const s = status || 'unassigned';
@@ -21,10 +24,8 @@ export function validateStatusFields({ status, location, borrower }) {
     throw badRequest(`status must be one of: ${STATUSES.join(', ')}`);
   }
   if (s === 'in_storage') {
-    if (!location) throw badRequest('location is required when status is in_storage');
     if (borrower) throw badRequest('borrower must be empty when status is in_storage');
   } else if (s === 'lent_out') {
-    if (!borrower) throw badRequest('borrower is required when status is lent_out');
     if (location) throw badRequest('location must be empty when status is lent_out');
   } else {
     if (location) throw badRequest('location must be empty when status is unassigned');
@@ -43,8 +44,8 @@ export async function createItem(input) {
   }
 
   const status = validateStatusFields(input);
-  const location = status === 'in_storage' ? input.location : null;
-  const borrower = status === 'lent_out' ? input.borrower : null;
+  const location = status === 'in_storage' ? (input.location || null) : null;
+  const borrower = status === 'lent_out' ? (input.borrower || null) : null;
 
   const info = await db.run(
     `INSERT INTO items (character_id, name, category, status, location, borrower, photo_path, note)
@@ -116,8 +117,8 @@ export async function updateItem(id, patch) {
   }
 
   const status = validateStatusFields(merged);
-  const location = status === 'in_storage' ? merged.location : null;
-  const borrower = status === 'lent_out' ? merged.borrower : null;
+  const location = status === 'in_storage' ? (merged.location || null) : null;
+  const borrower = status === 'lent_out' ? (merged.borrower || null) : null;
 
   const active = patch.active !== undefined ? (patch.active ? 1 : 0) : existing.active;
   const note = patch.note !== undefined ? patch.note : existing.note;
