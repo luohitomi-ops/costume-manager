@@ -12,8 +12,9 @@ fs.rmSync(distDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
 
 console.log('Packaging bundle with pkg...');
+const exePath = path.join(distDir, 'costume-manager.exe');
 execSync(
-  `npx pkg build/bundle.cjs --targets node22-win-x64 --output "${path.join(distDir, 'costume-manager.exe')}"`,
+  `npx pkg build/bundle.cjs --targets node22-win-x64 --output "${exePath}"`,
   { stdio: 'inherit', cwd: root }
 );
 
