@@ -66,7 +66,20 @@ fs.copyFileSync(path.join(root, 'build', 'schema.sql'), path.join(distDir, 'db',
 console.log('Copying public/ assets...');
 fs.cpSync(path.join(root, 'public'), path.join(distDir, 'public'), { recursive: true });
 
+console.log('Writing hidden-window launcher (double-clicking the .exe directly shows a console window)...');
+const launcherPath = path.join(distDir, '雙擊啟動.vbs');
+fs.writeFileSync(
+  launcherPath,
+  [
+    'Set objShell = CreateObject("WScript.Shell")',
+    'strFolder = Left(WScript.ScriptFullName, InStrRev(WScript.ScriptFullName, "\\"))',
+    'objShell.Run """" & strFolder & "costume-manager.exe""", 0, False',
+  ].join('\r\n'),
+  'utf-8' // ASCII-only content — no BOM needed for VBS to parse this correctly
+);
+
 console.log('');
 console.log(`Done. Distributable folder: ${distDir}`);
 console.log('Zip the dist/ folder to share it with a friend.');
+console.log('Tell them to double-click 雙擊啟動.vbs, not costume-manager.exe directly — the .vbs hides the console window.');
 console.log('data/ was intentionally not included — first run creates a fresh, empty database.');
