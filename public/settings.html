@@ -26,10 +26,17 @@
     </form>
   </section>
 
-  <section class="card relative bg-base-100 shadow-md p-6" style="border:1px solid #E4DBC5;border-radius:1.625rem">
+  <section class="card relative bg-base-100 shadow-md p-6 mb-6" style="border:1px solid #E4DBC5;border-radius:1.625rem">
     <h2 class="font-bold text-base-content m-0 mb-4">角色管理</h2>
     <ul id="character-list" class="flex flex-col gap-2 list-none p-0 m-0"></ul>
     <p id="character-error" class="text-sm text-center py-3 mt-3 hidden" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem"></p>
+  </section>
+
+  <section class="card relative bg-base-100 shadow-md p-6" style="border:1px solid #E4DBC5;border-radius:1.625rem">
+    <h2 class="font-bold text-base-content m-0 mb-4">隱眼庫存管理</h2>
+    <p class="text-sm mb-4" style="color:#8B8374">獨立於角色之外的隱眼款式清單，只記數量，不掛在任何角色底下。新增款式請到首頁「登記服裝道具」，類別選「隱眼」。</p>
+    <ul id="lens-list" class="flex flex-col gap-2 list-none p-0 m-0"></ul>
+    <p id="lens-error" class="text-sm text-center py-3 mt-3 hidden" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem"></p>
   </section>
 
 </div>
@@ -249,8 +256,92 @@ async function deleteCharacterRow(id, name) {
   await refreshCharacterList();
 }
 
+async function fetchLensList() {
+  const res = await fetch('/api/lenses');
+  if (!res.ok) throw new Error('lenses fetch failed');
+  return res.json();
+}
+
+function renderLensList(lenses) {
+  const list = document.getElementById('lens-list');
+  if (lenses.length === 0) {
+    list.innerHTML = '<li class="text-sm text-center py-3" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem">尚未新增隱眼款式</li>';
+    return;
+  }
+  list.innerHTML = lenses
+    .map(
+      (lens) => `
+        <li class="flex items-center justify-between gap-3 flex-wrap px-3 py-2 rounded-xl" style="background:#F2ECDE;border:1px solid #E4DBC5" data-lens-id="${lens.id}">
+          <span class="lens-name font-semibold">${lens.name}</span>
+          <span class="flex items-center gap-2">
+            <input type="number" class="lens-quantity-input input h-8 min-h-0 w-20" min="0" step="1" value="${lens.quantity}" style="background:#FBF8F1;border-color:#E4DBC5">
+            <button type="button" class="btn-save-lens h-8 min-h-0 px-2" style="color:#3F5C46" title="儲存數量">儲存</button>
+            <button type="button" class="btn-delete-lens h-8 min-h-0 px-2" style="color:#D98A4E" title="刪除">刪除</button>
+          </span>
+        </li>
+      `
+    )
+    .join('');
+
+  list.querySelectorAll('li').forEach((li) => {
+    const id = li.dataset.lensId;
+    const name = li.querySelector('.lens-name').textContent;
+
+    li.querySelector('.btn-save-lens').addEventListener('click', () => {
+      const quantity = li.querySelector('.lens-quantity-input').value;
+      updateLensQuantity(id, quantity);
+    });
+
+    li.querySelector('.btn-delete-lens').addEventListener('click', () => deleteLensRow(id, name));
+  });
+}
+
+async function refreshLensList() {
+  const errorEl = document.getElementById('lens-error');
+  try {
+    const lenses = await fetchLensList();
+    errorEl.classList.add('hidden');
+    renderLensList(lenses);
+  } catch (err) {
+    errorEl.textContent = '資料載入失敗，請重新整理頁面。';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function showLensError(message) {
+  const errorEl = document.getElementById('lens-error');
+  errorEl.textContent = message;
+  errorEl.classList.remove('hidden');
+}
+
+async function updateLensQuantity(id, quantity) {
+  const res = await fetch(`/api/lenses/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quantity: Number(quantity) }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    showLensError(err.error);
+    return;
+  }
+  await refreshLensList();
+}
+
+async function deleteLensRow(id, name) {
+  if (!window.confirm(`確定要刪除「${name}」嗎？此動作無法復原`)) return;
+  const res = await fetch(`/api/lenses/${id}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json();
+    showLensError(err.error);
+    return;
+  }
+  await refreshLensList();
+}
+
 refreshCategories();
 refreshCharacterList();
+refreshLensList();
 </script>
 </body>
 </html>

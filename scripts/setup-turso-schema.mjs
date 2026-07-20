@@ -81,4 +81,16 @@ if (existing.rows[0].n === 0) {
   console.log(`Categories table already has ${existing.rows[0].n} rows — skipping seed (already set up).`);
 }
 
+console.log('Creating lenses table...');
+await client.execute(`
+  CREATE TABLE IF NOT EXISTS lenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )
+`);
+await client.execute('CREATE INDEX IF NOT EXISTS idx_lenses_name ON lenses(name)');
+
 console.log('Done. Turso schema ready.');

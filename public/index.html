@@ -62,12 +62,12 @@
       </div>
       <div class="relative px-6">
         <form id="item-form" class="relative z-10 flex flex-col gap-4">
-          <div>
+          <div id="item-character-field">
             <label for="item-character" class="block text-sm mb-1" style="color:#8B8374">所屬角色</label>
             <select id="item-character" required class="select w-full h-11 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5"></select>
           </div>
           <div>
-            <label for="item-name" class="block text-sm mb-1" style="color:#8B8374">服裝道具名稱</label>
+            <label for="item-name" id="item-name-label" class="block text-sm mb-1" style="color:#8B8374">服裝道具名稱</label>
             <input type="text" id="item-name" placeholder="例如：白色假髮" required class="input w-full h-11 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5">
           </div>
           <div class="flex flex-wrap gap-4">
@@ -82,7 +82,7 @@
               <select id="item-category" class="sr-only" required tabindex="-1" aria-hidden="true"></select>
               <p id="category-load-error" class="text-sm text-center py-2 mt-1 hidden" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem"></p>
             </div>
-            <div class="flex-1" style="min-width:140px">
+            <div class="flex-1" id="item-status-field" style="min-width:140px">
               <label for="item-status" class="block text-sm mb-1" style="color:#8B8374">目前狀態</label>
               <select id="item-status" class="select w-full h-11 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5">
                 <option value="unassigned">尚未指定位置</option>
@@ -91,11 +91,15 @@
               </select>
             </div>
           </div>
-          <div>
+          <div id="item-location-field">
             <label for="item-location-or-borrower" class="block text-sm mb-1" style="color:#8B8374">收納位置 / 借給誰</label>
             <input type="text" id="item-location-or-borrower" placeholder="例如：衣櫃A-2號箱　或　小美" class="input w-full h-11 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5">
           </div>
-          <button type="submit" class="btn btn-primary h-11 min-h-0 self-start">新增道具</button>
+          <div id="item-quantity-field" class="hidden">
+            <label for="item-quantity" class="block text-sm mb-1" style="color:#8B8374">數量</label>
+            <input type="number" id="item-quantity" min="0" step="1" placeholder="例如：2" class="input w-full h-11 min-h-0" style="background:#F2ECDE;border-color:#E4DBC5">
+          </div>
+          <button type="submit" id="item-form-submit" class="btn btn-primary h-11 min-h-0 self-start">新增道具</button>
         </form>
       </div>
     </section>
@@ -194,6 +198,7 @@ function initCustomSelect(root) {
     trigger.querySelector('.cs-trigger-icon').innerHTML = opt.querySelector('.cs-option-icon').innerHTML;
     trigger.querySelector('.cs-trigger-label').textContent = opt.querySelector('.cs-option-label').textContent;
     options.forEach(o => o.setAttribute('aria-selected', o === opt ? 'true' : 'false'));
+    hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function open() {
@@ -269,6 +274,18 @@ async function refreshCharacterDropdowns() {
   document.getElementById('loadout-character').innerHTML = optionsHtml;
 }
 
+document.getElementById('item-category').addEventListener('change', (e) => {
+  const isLens = e.target.value === 'lens';
+  document.getElementById('item-character-field').classList.toggle('hidden', isLens);
+  document.getElementById('item-status-field').classList.toggle('hidden', isLens);
+  document.getElementById('item-location-field').classList.toggle('hidden', isLens);
+  document.getElementById('item-quantity-field').classList.toggle('hidden', !isLens);
+  document.getElementById('item-character').required = !isLens;
+  document.getElementById('item-name-label').textContent = isLens ? '隱眼款式名稱' : '服裝道具名稱';
+  document.getElementById('item-name').placeholder = isLens ? '例如：日拋-灰色' : '例如：白色假髮';
+  document.getElementById('item-form-submit').textContent = isLens ? '新增隱眼款式' : '新增道具';
+});
+
 document.getElementById('character-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('character-name').value;
@@ -283,22 +300,38 @@ document.getElementById('character-form').addEventListener('submit', async (e) =
 
 document.getElementById('item-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const status = document.getElementById('item-status').value;
-  const locationOrBorrower = document.getElementById('item-location-or-borrower').value;
-  const body = {
-    character_id: Number(document.getElementById('item-character').value),
-    name: document.getElementById('item-name').value,
-    category: document.getElementById('item-category').value,
-    status,
-  };
-  if (status === 'in_storage') body.location = locationOrBorrower;
-  if (status === 'lent_out') body.borrower = locationOrBorrower;
+  const category = document.getElementById('item-category').value;
+  const isLens = category === 'lens';
 
-  const res = await fetch('/api/items', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let res;
+  if (isLens) {
+    res = await fetch('/api/lenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('item-name').value,
+        quantity: Number(document.getElementById('item-quantity').value || 0),
+      }),
+    });
+  } else {
+    const status = document.getElementById('item-status').value;
+    const locationOrBorrower = document.getElementById('item-location-or-borrower').value;
+    const body = {
+      character_id: Number(document.getElementById('item-character').value),
+      name: document.getElementById('item-name').value,
+      category,
+      status,
+    };
+    if (status === 'in_storage') body.location = locationOrBorrower;
+    if (status === 'lent_out') body.borrower = locationOrBorrower;
+
+    res = await fetch('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
   if (!res.ok) {
     const err = await res.json();
     alert('發生錯誤：' + err.error);
@@ -306,6 +339,7 @@ document.getElementById('item-form').addEventListener('submit', async (e) => {
   }
   document.getElementById('item-name').value = '';
   document.getElementById('item-location-or-borrower').value = '';
+  document.getElementById('item-quantity').value = '';
 });
 
 document.getElementById('search-form').addEventListener('submit', async (e) => {

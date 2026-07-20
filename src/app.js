@@ -7,6 +7,7 @@ import charactersRouter from './routes/characters.js';
 import itemsRouter from './routes/items.js';
 import exportRouter from './routes/export.js';
 import categoriesRouter from './routes/categories.js';
+import lensesRouter from './routes/lenses.js';
 import { requireAuth, checkPassword, sessionCookieValue, COOKIE_NAME } from './middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,6 +48,7 @@ app.use(express.static(path.join(baseDir, 'public')));
 app.use('/api/characters', charactersRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/categories', categoriesRouter);
+app.use('/api/lenses', lensesRouter);
 app.use('/api', exportRouter);
 
 export default app;
