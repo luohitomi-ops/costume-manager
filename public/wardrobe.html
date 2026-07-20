@@ -40,6 +40,8 @@
     </div>
   </section>
 
+  <div id="lens-section" class="mb-4"></div>
+
   <div id="wardrobe-list" class="flex flex-col gap-4"></div>
   <p id="wardrobe-error" class="text-sm text-center py-3 hidden" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem">資料載入失敗，請重新整理頁面。</p>
 
@@ -72,6 +74,8 @@ let currentItemsByChar = new Map();
 let categoryLabels = {};
 const expandedIds = new Set();
 let editingItemId = null;
+let currentLenses = [];
+let lensExpanded = false;
 
 async function loadCategories() {
   const categories = await fetch('/api/categories').then((r) => r.json());
@@ -240,6 +244,90 @@ function renderWardrobe() {
   });
 }
 
+async function fetchLenses() {
+  const res = await fetch('/api/lenses');
+  if (!res.ok) throw new Error('lenses fetch failed');
+  return res.json();
+}
+
+function renderLensSection() {
+  const container = document.getElementById('lens-section');
+
+  const rowsHtml = currentLenses.length === 0
+    ? '<li class="text-sm text-center py-3" style="color:#8B8374;border:1px dashed #E4DBC5;border-radius:0.75rem">尚未新增隱眼款式</li>'
+    : currentLenses.map((lens) => `
+        <li class="flex items-center justify-between gap-3 flex-wrap px-3 py-2 text-sm rounded-xl" data-lens-id="${lens.id}" style="background:#F2ECDE;border:1px solid #E4DBC5">
+          <span class="font-semibold">${lens.name}</span>
+          <span class="flex items-center gap-2">
+            <input type="number" class="lens-quantity-input input h-8 min-h-0 w-20" min="0" step="1" value="${lens.quantity}" style="background:#FBF8F1;border-color:#E4DBC5">
+            <button type="button" class="btn-save-lens h-8 min-h-0 px-2" data-lens-id="${lens.id}" style="color:#3F5C46" title="儲存數量">儲存</button>
+            <button type="button" class="btn-delete-lens h-8 min-h-0 px-2" data-lens-id="${lens.id}" style="color:#D98A4E" title="刪除">刪除</button>
+          </span>
+        </li>
+      `).join('');
+
+  container.innerHTML = `
+    <section class="card relative bg-base-100 shadow-md overflow-hidden" style="border:1px solid #E4DBC5;border-radius:1.625rem">
+      <button type="button" id="lens-toggle" class="w-full flex items-center justify-between gap-3 px-6 py-5 text-left">
+        <span class="font-bold text-base-content">隱眼庫存（${currentLenses.length}）</span>
+        <svg class="w-5 h-5 shrink-0" style="color:#8B8374;transform:rotate(${lensExpanded ? '180deg' : '0deg'})" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <ul class="flex flex-col gap-2 px-6 pb-6 m-0 list-none ${lensExpanded ? '' : 'hidden'}">${rowsHtml}</ul>
+    </section>
+  `;
+
+  document.getElementById('lens-toggle').addEventListener('click', () => {
+    lensExpanded = !lensExpanded;
+    renderLensSection();
+  });
+
+  container.querySelectorAll('.btn-save-lens').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const li = btn.closest('li');
+      const quantity = li.querySelector('.lens-quantity-input').value;
+      const errorEl = document.getElementById('wardrobe-error');
+      try {
+        const res = await fetch(`/api/lenses/${btn.dataset.lensId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity: Number(quantity) }),
+        });
+        if (!res.ok) throw new Error('update failed');
+        errorEl.classList.add('hidden');
+        await refreshLenses();
+      } catch (err) {
+        errorEl.classList.remove('hidden');
+      }
+    });
+  });
+
+  container.querySelectorAll('.btn-delete-lens').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!window.confirm('確定要刪除這個隱眼款式嗎？此動作無法復原')) return;
+      const errorEl = document.getElementById('wardrobe-error');
+      try {
+        const res = await fetch(`/api/lenses/${btn.dataset.lensId}`, { method: 'DELETE' });
+        if (!res.ok && res.status !== 204) throw new Error('delete failed');
+        errorEl.classList.add('hidden');
+        await refreshLenses();
+      } catch (err) {
+        errorEl.classList.remove('hidden');
+      }
+    });
+  });
+}
+
+async function refreshLenses() {
+  const errorEl = document.getElementById('wardrobe-error');
+  try {
+    currentLenses = await fetchLenses();
+    errorEl.classList.add('hidden');
+    renderLensSection();
+  } catch (err) {
+    errorEl.classList.remove('hidden');
+  }
+}
+
 async function refreshItems() {
   const errorEl = document.getElementById('wardrobe-error');
   try {
@@ -272,6 +360,7 @@ document.getElementById('filter-q').addEventListener('input', debounceRefresh);
     await loadCategories();
     allCharacters = await fetchCharacters();
     await refreshItems();
+    await refreshLenses();
   } catch (err) {
     errorEl.classList.remove('hidden');
   }
