@@ -42,6 +42,13 @@ app.get('/', (req, res) => {
   res.redirect('/index.html');
 });
 
+app.use((req, res, next) => {
+  if (req.query.__debug === '1') {
+    return res.json({ path: req.path, url: req.url, originalUrl: req.originalUrl, baseDir });
+  }
+  next();
+});
+
 app.use(express.static(path.join(baseDir, 'public')));
 
 app.use('/api/characters', charactersRouter);
