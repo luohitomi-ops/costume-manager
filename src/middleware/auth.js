@@ -38,6 +38,13 @@ export function requireAuth(req, res, next) {
   }
   const token = req.cookies?.[COOKIE_NAME];
   if (token === expectedToken()) {
+    // Without this, Vercel's edge CDN caches the first successful response
+    // (e.g. index.html, served with express.static's default "public"
+    // Cache-Control) and then serves that SAME cached copy to every later
+    // visitor — including ones with no cookie at all — because a CDN cache
+    // hit never reaches this middleware to be checked. `private, no-store`
+    // tells any shared/CDN cache never to store this response.
+    res.set('Cache-Control', 'private, no-store');
     return next();
   }
   if (req.path.startsWith('/api/')) {
