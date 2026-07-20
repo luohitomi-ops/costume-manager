@@ -19,11 +19,21 @@ export function sessionCookieValue() {
 }
 
 export function requireAuth(req, res, next) {
-  // /style.css must also be exempt: login.html itself loads it via
-  // <link rel="stylesheet">, and that request hits this middleware
-  // before express.static — without this, the login page would load
-  // with no styling for anyone who isn't already authenticated.
-  if (req.path === '/login' || req.path === '/login.html' || req.path === '/style.css') {
+  // /style.css, /manifest.json, and everything under /assets/ must also be
+  // exempt: login.html itself loads all of these (stylesheet, favicon,
+  // manifest icons), and those requests hit this middleware before
+  // express.static — without this, an unauthenticated visitor's login page
+  // would load unstyled/iconless, and Edge/Chrome's "install as app" check
+  // (which fetches manifest.json directly, unauthenticated, before any
+  // login happens) would get a redirect-to-login response instead of the
+  // real manifest and refuse to offer installation.
+  if (
+    req.path === '/login' ||
+    req.path === '/login.html' ||
+    req.path === '/style.css' ||
+    req.path === '/manifest.json' ||
+    req.path.startsWith('/assets/')
+  ) {
     return next();
   }
   const token = req.cookies?.[COOKIE_NAME];

@@ -1,0 +1,13 @@
+{
+  "name": "服裝道具管家",
+  "short_name": "服裝道具管家",
+  "description": "cosplay 服裝道具庫存追蹤工具",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF8F1",
+  "theme_color": "#3F5C46",
+  "icons": [
+    { "src": "assets/app-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/app-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
