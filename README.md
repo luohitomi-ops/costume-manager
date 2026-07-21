@@ -73,6 +73,25 @@ Requires: a [Vercel](https://vercel.com) account and a
    ```
    Visit the deployed URL, enter your `ACCESS_PASSWORD`, and you're in.
 
+5. **(Optional) Set up automated backups.** Turso rarely loses data on its
+   own, but it's cheap insurance:
+   ```bash
+   node scripts/backup-turso.mjs
+   ```
+   Exports characters/items/categories/lenses to a timestamped JSON file in
+   `backups/` (auto-prunes to the latest 20). To schedule it weekly, use
+   Task Scheduler on Windows or `crontab` on Mac — full steps for both are
+   in [安裝教學.md](安裝教學.md) step 10 (Chinese only for now).
+
+   To recover, dry-run first to see what would be restored, then confirm:
+   ```bash
+   node scripts/restore-turso.mjs             # dry run, writes nothing
+   node scripts/restore-turso.mjs --confirm   # actually restores
+   ```
+   Backups only live on the machine that ran the command — nothing syncs
+   them off-machine automatically; handle offsite copies yourself if you
+   want that.
+
 **What this does not include:** multi-user accounts, password reset, or
 any syncing between a local copy and a cloud copy — pick one as your
 source of truth per instance.

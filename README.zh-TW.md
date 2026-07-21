@@ -62,6 +62,21 @@ npm run dev
    ```
    打開部署好的網址，輸入你的 `ACCESS_PASSWORD` 就能進去了。
 
+5. **（選用）設定自動備份。** Turso 本身很少弄丟資料，但多一層保障總是好的：
+   ```bash
+   node scripts/backup-turso.mjs
+   ```
+   會把 characters/items/categories/lenses 全部匯出成一份帶時間戳記的 JSON，存在
+   `backups/`（自動只保留最新 20 份）。想排程自動跑，Windows 用工作排程器、Mac 用
+   `crontab`（各自的完整步驟見[安裝教學.md](安裝教學.md)第 10 步）。
+
+   救援時先跑一次不帶 `--confirm` 的乾跑模式確認內容，沒問題再加上 `--confirm` 真的寫回去：
+   ```bash
+   node scripts/restore-turso.mjs             # 預演，不會真的寫入
+   node scripts/restore-turso.mjs --confirm   # 真的還原
+   ```
+   備份檔只存在本機，不會自動同步到任何雲端，想要異地備援要自己另外處理。
+
 **這個方案不包含：** 多人帳號、忘記密碼重設、或本地版跟雲端版之間的
 自動同步——兩者只能挑一個當作你目前真正在用的那一份。
 
