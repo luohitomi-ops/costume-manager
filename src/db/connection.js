@@ -32,11 +32,31 @@ if (driverName === 'turso') {
     ? require(path.join(baseDir, 'native_modules', 'better-sqlite3'))
     : require('better-sqlite3');
 
-  const dataDir = path.join(baseDir, 'data');
+  // Packaged builds store data outside the exe's own folder (in the OS's
+  // per-user app data directory) so re-extracting a new zip version — even
+  // to a different folder, or after deleting the old one — never loses
+  // data. Dev/source mode keeps the old project-relative location, which is
+  // the expected, discoverable place for a self-hoster running from source.
+  const dataDir = isPackaged
+    ? path.join(process.env.APPDATA || baseDir, 'costume-manager', 'data')
+    : path.join(baseDir, 'data');
   const dbPath = path.join(dataDir, 'costume-manager.db');
 
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  // One-time migration for installs from before this change: if the old
+  // exe-folder-relative db exists and nothing has been written to the new
+  // location yet, move it over so upgrading never silently drops data.
+  if (isPackaged && !fs.existsSync(dbPath)) {
+    const oldDbPath = path.join(baseDir, 'data', 'costume-manager.db');
+    if (fs.existsSync(oldDbPath)) {
+      fs.copyFileSync(oldDbPath, dbPath);
+      for (const suffix of ['-wal', '-shm']) {
+        if (fs.existsSync(oldDbPath + suffix)) fs.copyFileSync(oldDbPath + suffix, dbPath + suffix);
+      }
+    }
   }
 
   const sqliteDb = new Database(dbPath);
