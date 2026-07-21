@@ -294,6 +294,9 @@ function renderLensSection() {
         });
         if (!res.ok) throw new Error('update failed');
         errorEl.classList.add('hidden');
+        btn.textContent = '已儲存';
+        btn.disabled = true;
+        await new Promise((resolve) => setTimeout(resolve, 700));
         await refreshLenses();
       } catch (err) {
         errorEl.classList.remove('hidden');

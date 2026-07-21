@@ -287,9 +287,9 @@ function renderLensList(lenses) {
     const id = li.dataset.lensId;
     const name = li.querySelector('.lens-name').textContent;
 
-    li.querySelector('.btn-save-lens').addEventListener('click', () => {
+    li.querySelector('.btn-save-lens').addEventListener('click', (e) => {
       const quantity = li.querySelector('.lens-quantity-input').value;
-      updateLensQuantity(id, quantity);
+      updateLensQuantity(id, quantity, e.currentTarget);
     });
 
     li.querySelector('.btn-delete-lens').addEventListener('click', () => deleteLensRow(id, name));
@@ -314,7 +314,7 @@ function showLensError(message) {
   errorEl.classList.remove('hidden');
 }
 
-async function updateLensQuantity(id, quantity) {
+async function updateLensQuantity(id, quantity, btn) {
   const res = await fetch(`/api/lenses/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -324,6 +324,11 @@ async function updateLensQuantity(id, quantity) {
     const err = await res.json();
     showLensError(err.error);
     return;
+  }
+  if (btn) {
+    btn.textContent = '已儲存';
+    btn.disabled = true;
+    await new Promise((resolve) => setTimeout(resolve, 700));
   }
   await refreshLensList();
 }
